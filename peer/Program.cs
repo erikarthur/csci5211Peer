@@ -126,11 +126,25 @@ namespace ServerExperiment
 				break;
 				
 			case "GET":
-				Console.WriteLine("got a get for file: " + cmdParts[1] + "\n");
+				if (cmdParts.Length != 2)
+				{
+					Console.WriteLine("Syntax Error:\nUsage:\nget filename\n");
+				}
+				else
+				{
+					Console.WriteLine("got a get for file: " + cmdParts[1] + "\n");
+				}
 				break;
 				
 			case "PUT":
-				Console.WriteLine("got a put for file: " + cmdParts[1] + "\n");
+				if (cmdParts.Length != 2)
+				{
+					Console.WriteLine("Syntax Error:\nUsage:\nput filename\n");
+				}
+				else
+				{
+					Console.WriteLine("got a put for file: " + cmdParts[1] + "\n");
+				}
 				break;
 				
 			case "LIST":
@@ -189,6 +203,7 @@ namespace ServerExperiment
 		public static void disconnectFromCentralServer ()
 		{
 			NetworkStream clientStream = Program.centralServer.GetStream();
+			clientStream.ReadTimeout = System.Threading.Timeout.Infinite;
 			peerInstance peer = new peerInstance();
 			peer.peerIP = s.myIPAddress;
 			peer.peerPort = s.myPort;
