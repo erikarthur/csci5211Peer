@@ -1,11 +1,10 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="peer/Program.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="peer/server.cs">
     <Files>
       <File FileName="peer/Program.cs" Line="258" Column="5" />
-      <File FileName="peer/server.cs" Line="31" Column="67" />
-      <File FileName="peer/Program.cs" Line="11" Column="14" />
-      <File FileName="peer/server.cs" Line="31" Column="67" />
+      <File FileName="peer/server.cs" Line="63" Column="7" />
+      <File FileName="peer/client.cs" Line="72" Column="39" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>

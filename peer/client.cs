@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -14,7 +14,6 @@ namespace socketSrv
         TcpClient tcpClient = new TcpClient(AddressFamily.InterNetwork);
         peerInstance myServer = new peerInstance();
         NetworkStream clientStream;
-        //public Client()
         Timer timer = new Timer();
 
         public void setServer(peerInstance p)
@@ -26,9 +25,6 @@ namespace socketSrv
         {
             IPHostEntry serverIP = Dns.GetHostEntry(myServer.peerIP.ToString());
             tcpClient = new TcpClient(serverIP.HostName, myServer.peerPort);
-            //timer.Interval = 2500;
-            //timer.Elapsed += timer_Elapsed;
-            //timer.Start();
 
             clientStream = tcpClient.GetStream();
 
@@ -58,10 +54,6 @@ namespace socketSrv
             {
                 //strip off first 4 bytes and get the message length
                 System.Buffer.BlockCopy(buffer, 0, messageLength, 0, sizeof(Int32));
-
-                //if (BitConverter.IsLittleEndian)
-                //    Array.Reverse(messageLength);  //convert from big endian to little endian
-
                 numMessageBytes = BitConverter.ToInt32(messageLength, 0);
             }
 
@@ -79,27 +71,6 @@ namespace socketSrv
             int ackNum = -99;
             System.Buffer.BlockCopy(buffer, 4, ackMessage, 0, 4);
             ackNum = BitConverter.ToInt32(ackMessage, 0);
-
-            //if (ackNum == 1)
-            //{
-            //    //successfully created connection to server.  Ready to participate in p2p network
-
-            //    //start thread to process messages
-            //    //Thread clientThread = new Thread(new ParameterizedThreadStart(HandleClientComm));
-            //    //clientThread.Start(client);
-            //    int x = 1;
-            //    while (true)
-            //    {
-            //        x = 1;
-            //    }
-
-            //}
-            //else
-            //{
-            //    Console.WriteLine("Server error: " + ackNum + ". Closing connection and exiting program");
-            //    tcpClient.Close();
-            //    Environment.Exit(ackNum);
-            //}
         }
 
         void timer_Elapsed(object sender, ElapsedEventArgs e)

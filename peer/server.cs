@@ -50,7 +50,8 @@ namespace socketSrv
             numMessageBytes = 0;
             nextMsgBytesRead = 0;
             bool foundClient = false;
-            while (true)
+			bool p2pClientJoined = true;
+			while (p2pClientJoined)
             {
 
                 bytesRead = 0;
@@ -58,8 +59,8 @@ namespace socketSrv
                 
                 //blocks until a client sends a message
                 bytesRead = clientStream.Read(buffer, 0, 4096);
-                Console.WriteLine("just read data from the client below");
-                Console.WriteLine(tcpClient.Client.RemoteEndPoint);
+				//Console.WriteLine("just read data from the client below");
+				//Console.WriteLine(tcpClient.Client.RemoteEndPoint);
 
 
                 //check to see if client in in clientList
@@ -81,6 +82,7 @@ namespace socketSrv
 					Console.WriteLine("------");
                     Console.WriteLine("Added peer connection");
                     Console.WriteLine(clientList[clientList.Count() - 1].machineIP + ", " + clientList[clientList.Count() - 1].machinePort);
+					Console.WriteLine(this.myIPAddress + ", " + this.myPort);
                 }
 
                 if (bytesRead > 3)
@@ -105,27 +107,47 @@ namespace socketSrv
                
                 int messageID = BitConverter.ToInt32(buffer, 4);
 
-                if (messageID == 1)
-                {
-                    //request for peer to join network
-                    messageID = 1;   //add client
-                    int clientMsgStreamLength = (int)(2 * sizeof(Int32));
-                    
-                    byte[] intBytes = BitConverter.GetBytes(clientMsgStreamLength);
+				switch (messageID) {
 
-                    byte[] messageBytes = BitConverter.GetBytes(messageID);
+				case 0:
+					//client leaving the network
+					p2pClientJoined = false;
+					break;
 
-                    System.Buffer.BlockCopy(intBytes, 0, buffer, 0, 4);  //prepends length to buffer
-                    System.Buffer.BlockCopy(messageBytes, 0, buffer, 4, messageBytes.Length);
+				case 1:
+					//request for peer to join network
+					messageID = 1;   //add client
+					int clientMsgStreamLength = (int)(2 * sizeof(Int32));
 
-                    clientStream.Write(buffer, 0, clientMsgStreamLength);
-                    clientStream.Flush();
-                }
+					byte[] intBytes = BitConverter.GetBytes(clientMsgStreamLength);
+
+					byte[] messageBytes = BitConverter.GetBytes(messageID);
+
+					System.Buffer.BlockCopy(intBytes, 0, buffer, 0, 4);  //prepends length to buffer
+					System.Buffer.BlockCopy(messageBytes, 0, buffer, 4, messageBytes.Length);
+
+					clientStream.Write(buffer, 0, clientMsgStreamLength);
+					clientStream.Flush();
+					break;
+				
+				case 2:
+					//get command from client
+					break;
+
+				case 3: 
+					//put command from client
+					break;
+
+				default:
+					Console.WriteLine ("Received invalid command from network: " + messageID);
+					Console.Write ("\n");
+					break;
+				}
+
                 messageID = 0;
 
             }
-
-            //tcpClient.Close();
+            tcpClient.Close();
         }
 
         void timer_Elapsed(object sender, ElapsedEventArgs e)
@@ -144,8 +166,7 @@ namespace socketSrv
                     //blocks until a client has connected to the server
                     TcpClient client = this.tcpListener.AcceptTcpClient();
 
-                    //create a thread to handle communication 
-                    //with connected client
+                    //create a thread to handle communication with connected client
                     Thread clientThread = new Thread(new ParameterizedThreadStart(HandleClientComm));
                     clientThread.Start(client);
                 }
