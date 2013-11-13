@@ -121,6 +121,7 @@ namespace ServerExperiment
 			{
 			case "QUIT":
 				//tell clients, server, and central server that this client is leaving.
+				disconnectFromCentralServer ();
 				Environment.Exit(0);
 				break;
 				
@@ -192,7 +193,7 @@ namespace ServerExperiment
 			peer.peerIP = s.myIPAddress;
 			peer.peerPort = s.myPort;
 
-			int cmd = 1;  //register client
+			int cmd = 1;  //deregister client
 
 			byte[] addressBytes = peer.peerIP.GetAddressBytes();
 			byte[] portBytes = BitConverter.GetBytes(peer.peerPort);
@@ -283,7 +284,7 @@ namespace ServerExperiment
             peer.peerIP = s1.myIPAddress;
             peer.peerPort = s1.myPort;
 
-			int cmd = 1;  //register client
+			int cmd = 0;  //register client
 
             byte[] addressBytes = peer.peerIP.GetAddressBytes();
             byte[] portBytes = BitConverter.GetBytes(peer.peerPort);
