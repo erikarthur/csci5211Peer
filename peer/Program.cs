@@ -22,15 +22,17 @@ namespace ServerExperiment
 		static string consoleCmd;
 		static MessageQueue clientMessageQueue = new MessageQueue();
 		static MessageQueue serverMessageQueue = new MessageQueue();
-		
-		
+			
+		static Server s;
+		static Client c;
+			
         static void Main(string[] args)
         {
 			
 			//create the list of local files
 			
             //create the server instance for this client
-            Server s = new Server();
+            s = new Server();
             
 			//connect to central server and get P2P server info
             peerInstance clientInstance = new peerInstance();            
@@ -48,7 +50,7 @@ namespace ServerExperiment
                 Console.WriteLine("My PEER server address is: " + clientInstance.peerIP + ":" + clientInstance.peerPort);
 
 				//create the client instance
-                Client c = new Client();
+                c = new Client();
                 c.setServer(clientInstance);
                 c.connectToServer();
             }
@@ -182,7 +184,86 @@ namespace ServerExperiment
 			}
 			Console.Write("\n");
 		}
-		
+
+		public static void disconnectFromCentralServer ()
+		{
+			NetworkStream clientStream = Program.centralServer.GetStream();
+			peerInstance peer = new peerInstance();
+			peer.peerIP = s.myIPAddress;
+			peer.peerPort = s.myPort;
+
+			int cmd = 1;  //register client
+
+			byte[] addressBytes = peer.peerIP.GetAddressBytes();
+			byte[] portBytes = BitConverter.GetBytes(peer.peerPort);
+			byte[] cmdBytes = BitConverter.GetBytes(cmd);
+
+			int clientMsgStreamLength = (int)(addressBytes.Length + portBytes.Length + sizeof(Int32) + sizeof(Int32));
+
+			//copy to byte array
+			byte[] buffer = new byte[4096];  //add 4 bytes for the message length at the front
+
+			byte[] intBytes = BitConverter.GetBytes(clientMsgStreamLength);
+
+			System.Buffer.BlockCopy(intBytes, 0, buffer, 0, 4);  //prepends length to buffer
+			System.Buffer.BlockCopy(addressBytes, 0, buffer, 4, addressBytes.Length);
+			System.Buffer.BlockCopy(portBytes, 0, buffer, 4 + addressBytes.Length, portBytes.Length);
+			System.Buffer.BlockCopy(cmdBytes, 0, buffer, 4 + addressBytes.Length + portBytes.Length, cmdBytes.Length);
+
+			clientStream.Write(buffer, 0, clientMsgStreamLength);
+			clientStream.Flush();
+
+			//wait for ack on disconnect
+			int bytesRead, nextMsgBytesRead;
+			bytesRead = -99;
+			bytesRead = clientStream.Read(buffer, 0, 4096);
+
+			byte[] message = new byte[4092];
+			byte[] messageLength = new byte[4];
+			int messageBytes = 0;
+
+			if (bytesRead > 3)
+			{
+				//strip off first 4 bytes and get the message length
+				System.Buffer.BlockCopy(buffer, 0, messageLength, 0, sizeof(Int32));
+
+				//if (BitConverter.IsLittleEndian)
+				//    Array.Reverse(messageLength);  //convert from big endian to little endian
+
+				messageBytes = BitConverter.ToInt32(messageLength, 0);
+			}
+
+			while (bytesRead != messageBytes)
+			{
+				nextMsgBytesRead = clientStream.Read(buffer, bytesRead, 4096 - bytesRead);
+				bytesRead += nextMsgBytesRead;
+
+				//bugbug - need a watchdog timer for timeouts
+				//bugbug - need to handle the case of more data than expected from the network
+			}
+			byte[] inBuffer = new byte[messageBytes];
+			System.Buffer.BlockCopy(buffer, 4, inBuffer, 0, messageBytes - 4);
+
+			addressBytes = new byte[4];
+			portBytes = new byte[sizeof(Int32)];
+			byte [] responseBytes = new byte[sizeof(Int32)];
+			System.Buffer.BlockCopy(buffer, 4, addressBytes, 0, 4);
+			System.Buffer.BlockCopy(buffer, 8, portBytes, 0, 4);
+			System.Buffer.BlockCopy(buffer, 12, responseBytes, 0, 4);
+
+			IPAddress messageIP = new IPAddress(addressBytes);
+			Int32 port = BitConverter.ToInt32(portBytes, 0);
+			Int32 response = BitConverter.ToInt32(responseBytes, 0);
+
+			if (response == 0) {
+				Console.WriteLine ("Successfully disconnected from central server");
+			}
+			else {
+				Console.WriteLine ("Error disconnecting from central server.  Error code is: " + response);	
+			}
+
+		}
+
         public static peerInstance connectToCentralServer(string centralServerName, Server s1)
         {
             try
@@ -202,10 +283,13 @@ namespace ServerExperiment
             peer.peerIP = s1.myIPAddress;
             peer.peerPort = s1.myPort;
 
+			int cmd = 1;  //register client
+
             byte[] addressBytes = peer.peerIP.GetAddressBytes();
             byte[] portBytes = BitConverter.GetBytes(peer.peerPort);
+			byte[] cmdBytes = BitConverter.GetBytes(cmd);
 
-            int clientMsgStreamLength = (int)(addressBytes.Length + portBytes.Length + sizeof(Int32));
+            int clientMsgStreamLength = (int)(addressBytes.Length + portBytes.Length + sizeof(Int32) + sizeof(Int32));
 
 
             //copy to byte array
@@ -216,6 +300,7 @@ namespace ServerExperiment
             System.Buffer.BlockCopy(intBytes, 0, buffer, 0, 4);  //prepends length to buffer
             System.Buffer.BlockCopy(addressBytes, 0, buffer, 4, addressBytes.Length);
             System.Buffer.BlockCopy(portBytes, 0, buffer, 4 + addressBytes.Length, portBytes.Length);
+			System.Buffer.BlockCopy(cmdBytes, 0, buffer, 4 + addressBytes.Length + portBytes.Length, cmdBytes.Length);
 
             clientStream.Write(buffer, 0, clientMsgStreamLength);
             clientStream.Flush();
