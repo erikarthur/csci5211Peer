@@ -208,7 +208,7 @@ namespace ServerExperiment
 			peer.peerIP = s.myIPAddress;
 			peer.peerPort = s.myPort;
 
-			int cmd = 1;  //deregister client
+			int cmd = 0;  //deregister client
 
 			byte[] addressBytes = peer.peerIP.GetAddressBytes();
 			byte[] portBytes = BitConverter.GetBytes(peer.peerPort);
@@ -249,7 +249,7 @@ namespace ServerExperiment
 				messageBytes = BitConverter.ToInt32(messageLength, 0);
 			}
 
-			while (bytesRead != messageBytes)
+			while (bytesRead < messageBytes)
 			{
 				nextMsgBytesRead = clientStream.Read(buffer, bytesRead, 4096 - bytesRead);
 				bytesRead += nextMsgBytesRead;
@@ -299,7 +299,7 @@ namespace ServerExperiment
             peer.peerIP = s1.myIPAddress;
             peer.peerPort = s1.myPort;
 
-			int cmd = 0;  //register client
+			int cmd = 1;  //register client
 
             byte[] addressBytes = peer.peerIP.GetAddressBytes();
             byte[] portBytes = BitConverter.GetBytes(peer.peerPort);
@@ -340,7 +340,7 @@ namespace ServerExperiment
                 messageBytes = BitConverter.ToInt32(messageLength, 0);
             }
 
-            while (bytesRead != messageBytes)
+            while (bytesRead < messageBytes)
             {
                 nextMsgBytesRead = clientStream.Read(buffer, bytesRead, 4096 - bytesRead);
                 bytesRead += nextMsgBytesRead;
