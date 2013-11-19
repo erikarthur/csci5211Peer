@@ -45,12 +45,15 @@
     <Compile Include="AsyncUserToken.cs" />
     <Compile Include="BufferManager.cs" />
     <Compile Include="message.cs" />
-    <Compile Include="newServer\Program.cs" />
+    <Compile Include="PeerToPeer.cs" />
     <Compile Include="Server.cs" />
     <Compile Include="SocketAsyncEventArgsPool.cs" />
     <Compile Include="peerInstance.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="old\server.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="newServer\" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>
