@@ -1,176 +1,352 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Net;
-using System.Net.Sockets;
 using System.Text;
+using System.Net.Sockets;
+using System.Net;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Timers;
+
 
 namespace socketSrv
 {
-    class Server
+  
+    class Server : IDisposable
     {
-        private TcpListener tcpListener;
-        private Thread listenThread;
-        public Int32 myPort;
-        public IPAddress myIPAddress;
-        public Random RNG = new Random();
-        public List<networkList> clientList = new List<networkList>();
-       
-        public Server()
+        private int numConnections;                     // the maximum number of connections the sample is designed to handle simultaneously 
+        private int receiveBufferSize;                  // buffer size to use for each socket I/O operation 
+        BufferManager bufferManager;                    // represents a large reusable set of buffers for all socket operations
+        const int opsToPreAlloc = 2;                    // read, write (don't alloc buffer space for accepts)
+        Socket listenSocket;                            // the socket used to listen for incoming connection requests
+        SocketAsyncEventArgsStack asyncSocketStack;     // stack of reusable SocketAsyncEventArgs objects for write, read and accept socket operations
+        int numConnectedSockets;                        // the total number of clients connected to the server 
+        Semaphore maxNumberAcceptedClients;
+        public List<peerInstance> peerList;
+        public int serverPort;
+
+        public Server(int numConns, int receiveSize)
         {
-            this.myPort = 4001 + RNG.Next(3000);
+            numConnectedSockets = 0;
+            numConnections = numConns;
+            receiveBufferSize = receiveSize;
+            bufferManager = new BufferManager(receiveBufferSize * numConnections * opsToPreAlloc, receiveBufferSize, numConnections);
+            asyncSocketStack = new SocketAsyncEventArgsStack(numConnections);
+            maxNumberAcceptedClients = new Semaphore(numConnections, numConnections);
+            peerList = new List<peerInstance>();
+            serverPort = 0;
 
-            this.tcpListener = new TcpListener(IPAddress.Any, this.myPort);
-            string hostname = Dns.GetHostName();
+        }
 
-            //bug bug  need to figure out the array of addresses and pass correctly
-            this.myIPAddress = Dns.Resolve(hostname).AddressList[0];  //0 for ubunto and most machines
+        public void Dispose()
+        {
+            this.Dispose();
+            GC.SuppressFinalize(this);
+        }
 
+        public void Init()
+        {
+            // Allocates one large byte buffer which all I/O operations use a piece of.  This gaurds 
+            // against memory fragmentation
+             bufferManager.initBuffers();
 
-            this.listenThread = new Thread(new ThreadStart(ListenForClients));
-            this.listenThread.Start();
-            Console.WriteLine(this.myIPAddress + ", " + this.myPort);
+            // preallocate pool of SocketAsyncEventArgs objects
+            SocketAsyncEventArgs socketEventArg;
+
+            for (int i = 0; i < numConnections; i++)
+            {
+                //Pre-allocate a set of reusable SocketAsyncEventArgs
+                socketEventArg = new SocketAsyncEventArgs();
+                socketEventArg.Completed += new EventHandler<SocketAsyncEventArgs>(SendRecieve_Completed);
+                socketEventArg.UserToken = new AsyncUserToken();
+                socketEventArg.SendPacketsSendSize = 1500;
+
+                // assign a byte buffer from the buffer pool to the SocketAsyncEventArg object
+                bufferManager.assignBuffer(socketEventArg);
+
+                // add SocketAsyncEventArg to the pool
+                asyncSocketStack.Push(socketEventArg);
+            }
+
+        }
+
+        public void Start(IPEndPoint localEndPoint)
+        {
+            listenSocket = new Socket(localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            listenSocket.Bind(localEndPoint);
+            
+            listenSocket.Listen(20);
+          
+            StartAccept(null);
+
+            Console.WriteLine("Starting server for p2p network on port {0}\n", localEndPoint.Port);
             
         }
 
-        private void HandleClientComm(object client)
+
+        public void StartAccept(SocketAsyncEventArgs acceptEventArg)
         {
-            TcpClient tcpClient = (TcpClient)client;
-            NetworkStream clientStream = tcpClient.GetStream();
-            ASCIIEncoding encoder = new ASCIIEncoding();
-
-            byte[] buffer = new byte[4096];
-            byte[] messageLenth = new byte[4];
-            int bytesRead, numMessageBytes, nextMsgBytesRead;
-
-            numMessageBytes = 0;
-            nextMsgBytesRead = 0;
-            bool foundClient = false;
-			bool p2pClientJoined = true;
-			while (p2pClientJoined)
+            if (acceptEventArg == null)
             {
+                acceptEventArg = new SocketAsyncEventArgs();
+                acceptEventArg.Completed += new EventHandler<SocketAsyncEventArgs>(AcceptEventArg_Completed);
+            }
+            else
+            {
+                // socket must be cleared since the context object is being reused
+                acceptEventArg.AcceptSocket = null;
+            }
 
-                bytesRead = 0;
+            maxNumberAcceptedClients.WaitOne();
 
+            bool willRaiseEvent = listenSocket.AcceptAsync(acceptEventArg);
+            if (!willRaiseEvent)
+            {
+                ProcessAccept(acceptEventArg);
+            }
+        }
+
+        void AcceptEventArg_Completed(object sender, SocketAsyncEventArgs e)
+        {
+            ProcessAccept(e);
+        }
+
+        private void ProcessAccept(SocketAsyncEventArgs e)
+        {
+            Interlocked.Increment(ref numConnectedSockets);
+            Console.WriteLine("Client connection accepted. There are {0} clients connected to the server",
+                numConnectedSockets);
+
+            SocketAsyncEventArgs socketEventArgs = asyncSocketStack.Pop();
+            ((AsyncUserToken)socketEventArgs.UserToken).Socket = e.AcceptSocket;
+
+            IPEndPoint iep = (IPEndPoint)e.AcceptSocket.RemoteEndPoint;
+            Console.WriteLine("New Peer is {0}", iep.Address);
+
+            bool willRaiseEvent = e.AcceptSocket.ReceiveAsync(socketEventArgs);
+
+            if (!willRaiseEvent)
+            {
+                ProcessReceive(socketEventArgs);
+            }
+
+            // Accept the next connection request
+            StartAccept(e);
+        }
+
+        void SendRecieve_Completed(object sender, SocketAsyncEventArgs e)
+        {
+            //if (e.RemoteEndPoint != null)
+            //{
+                switch (e.LastOperation)
+                {
+                    case SocketAsyncOperation.Receive:
+                        ProcessReceive(e);
+                        break;
+                    case SocketAsyncOperation.Send:
+                        ProcessSend(e);
+                        break;
+                    default:
+                        throw new ArgumentException("The last operation completed on the socket was not a receive or send");
+                }
+            //}
+
+        }
+
+        //member function for parsing command messages.
+        private commandMessage parseCommandMessage(byte[] buf, int bufBytes)
+        {
+            commandMessage returnMsg = new commandMessage();
+            byte[] msgLen = new byte[4];
+            Int32 bufferCnt = 0;
+
+            System.Buffer.BlockCopy(buf, bufferCnt, msgLen, 0, msgLen.Length);
+            int messageLength = BitConverter.ToInt32(msgLen, 0);
+            bufferCnt += msgLen.Length;
+
+            if (messageLength == bufBytes)
+            {
+                byte[] addressBytes = new byte[4];
+                byte[] portBytes = new byte[sizeof(Int32)];
+                byte[] cmdBytes = new byte[sizeof(Int32)];
                 
-                //blocks until a client sends a message
-                bytesRead = clientStream.Read(buffer, 0, 4096);
-				//Console.WriteLine("just read data from the client below");
-				//Console.WriteLine(tcpClient.Client.RemoteEndPoint);
+                System.Buffer.BlockCopy(buf, bufferCnt, addressBytes, 0, addressBytes.Length);
+                bufferCnt += addressBytes.Length;
 
+                System.Buffer.BlockCopy(buf, bufferCnt, portBytes, 0, portBytes.Length);
+                bufferCnt += portBytes.Length;
 
-                //check to see if client in in clientList
-                for (int j = 0; j < clientList.Count();j++ )
-                {
-                    if ((clientList[j].machineIP == IPAddress.Parse(((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address.ToString()))  &&
-                        ( clientList[j].machinePort == Int32.Parse(((IPEndPoint)tcpClient.Client.RemoteEndPoint).Port.ToString())))
-                    {
-                        //found it
-                        foundClient = true;
-                    }
-                }
-                if (!foundClient)
-                {
-                    clientList.Add(new networkList());
-                    clientList[clientList.Count() - 1].machineIP = IPAddress.Parse(((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address.ToString());
-                    clientList[clientList.Count() - 1].machinePort = Int32.Parse(((IPEndPoint)tcpClient.Client.RemoteEndPoint).Port.ToString());
-                    clientList[clientList.Count() - 1].machineName = Dns.Resolve(clientList[clientList.Count() - 1].machineIP.ToString()).ToString();
-					Console.WriteLine("------");
-                    Console.WriteLine("Added peer connection");
-                    Console.WriteLine(clientList[clientList.Count() - 1].machineIP + ", " + clientList[clientList.Count() - 1].machinePort);
-					Console.WriteLine(this.myIPAddress + ", " + this.myPort);
-                }
+                System.Buffer.BlockCopy(buf, bufferCnt, cmdBytes, 0, cmdBytes.Length);
+                bufferCnt += cmdBytes.Length;
 
-                if (bytesRead > 3)
-                {
-                    //strip off first 4 bytes and get the message length
-                    System.Buffer.BlockCopy(buffer, 0, messageLenth, 0, sizeof(Int32));
-
-                    //if (BitConverter.IsLittleEndian)
-                    //    Array.Reverse(messageLength);  //convert from big endian to little endian
-
-                    numMessageBytes = BitConverter.ToInt32(messageLenth, 0);
-                }
-
-                while (bytesRead != numMessageBytes)
-                {
-                    nextMsgBytesRead = clientStream.Read(buffer, bytesRead, 4096 - bytesRead);
-                    bytesRead += nextMsgBytesRead;
-
-                    //bugbug - need a watchdog timer for timeouts
-                    //bugbug - need to handle the case of more data than expected from the network
-                }
-               
-                int messageID = BitConverter.ToInt32(buffer, 4);
-
-				switch (messageID) {
-
-				case 0:
-					//client leaving the network
-					p2pClientJoined = false;
-					break;
-
-				case 1:
-					//request for peer to join network
-					messageID = 1;   //add client
-					int clientMsgStreamLength = (int)(2 * sizeof(Int32));
-
-					byte[] intBytes = BitConverter.GetBytes(clientMsgStreamLength);
-
-					byte[] messageBytes = BitConverter.GetBytes(messageID);
-
-					System.Buffer.BlockCopy(intBytes, 0, buffer, 0, 4);  //prepends length to buffer
-					System.Buffer.BlockCopy(messageBytes, 0, buffer, 4, messageBytes.Length);
-
-					clientStream.Write(buffer, 0, clientMsgStreamLength);
-					clientStream.Flush();
-					break;
-				
-				case 2:
-					//get command from client
-					break;
-
-				case 3: 
-					//put command from client
-					break;
-
-				default:
-					Console.WriteLine ("Received invalid command from network: " + messageID);
-					Console.Write ("\n");
-					break;
-				}
-
-                messageID = 0;
-
+                returnMsg.peerIP = new IPAddress(addressBytes);
+                returnMsg.port = BitConverter.ToInt32(portBytes, 0);
+                returnMsg.command = BitConverter.ToInt32(cmdBytes, 0);
             }
-            tcpClient.Close();
+
+            return returnMsg;
         }
 
-        void timer_Elapsed(object sender, ElapsedEventArgs e)
+        private commandMessage createCommandMessage(Int32 peerIndex, Int32 msgInt)
         {
-            throw new NotImplementedException();
+            commandMessage returnMsg = new commandMessage();
+            returnMsg.peerIP = peerList[peerIndex].peerIP;
+            returnMsg.port = peerList[peerIndex].peerPort;
+            returnMsg.command = msgInt;
+
+            return returnMsg;
         }
 
-        private void ListenForClients()
+        private void ProcessReceive(SocketAsyncEventArgs e)
         {
-            this.tcpListener.Start();
 
-            while (true)
+            if ((e.BytesTransferred == 0) && (e.RemoteEndPoint == null))
             {
-                if (tcpListener.Pending())
-                {
-                    //blocks until a client has connected to the server
-                    TcpClient client = this.tcpListener.AcceptTcpClient();
+                //socket went away.  Break from function
+                CloseClientSocket(e);
+                return;
+            }
 
-                    //create a thread to handle communication with connected client
-                    Thread clientThread = new Thread(new ParameterizedThreadStart(HandleClientComm));
-                    clientThread.Start(client);
+            Random randomNumberGenerator = new Random();
+
+            // check if the remote host closed the connection
+            AsyncUserToken token = (AsyncUserToken)e.UserToken;
+            
+            byte[] myBuffer = new byte[1501];
+            System.Buffer.BlockCopy(e.Buffer, e.Offset, myBuffer, 0, e.Count);
+
+            commandMessage msg = parseCommandMessage(myBuffer, e.BytesTransferred);
+
+            int peerNumber;
+            //create peer variable to send back to client
+            commandMessage replyMsg = new commandMessage(); 
+
+            //bug bug - do a real calc here
+            int clientMsgStreamLength = 16;
+
+            //copy to byte array
+            byte[] intBytes = BitConverter.GetBytes(clientMsgStreamLength);
+            byte[] addressBytes = new byte[4];
+            byte[] portBytes = new byte[4];
+            byte[] cmdBytes = new byte[4];
+            
+            switch (msg.command)
+            {
+                case 1:
+                    peerInstance newPeer = new peerInstance();
+
+                    newPeer.peerIP = msg.peerIP;
+                    newPeer.peerPort = msg.port;
+
+                    if (peerList.Count < 2)
+                        peerNumber = 0;
+                    else
+                        peerNumber = randomNumberGenerator.Next(peerList.Count);
+
+                    //add the peer to peerList
+                    peerList.Add(new peerInstance());
+                    int newPeerCnt = peerList.Count - 1;
+
+                    peerList[newPeerCnt].peerIP = newPeer.peerIP;
+                    peerList[newPeerCnt].peerPort = newPeer.peerPort;
+                    peerList[newPeerCnt].asyncSocketEvent = e;
+
+                    Console.WriteLine("Peer is connected to {0} at port {1}", peerList[newPeerCnt].peerIP, peerList[newPeerCnt].peerPort);
+
+                    intBytes = BitConverter.GetBytes(16);
+                    addressBytes = peerList[peerNumber].peerIP.GetAddressBytes();
+				    portBytes = BitConverter.GetBytes(peerList[peerNumber].peerPort);
+					cmdBytes = BitConverter.GetBytes(0);
+
+					System.Buffer.BlockCopy(intBytes, 0, myBuffer, 0, 4);  //prepends length to buffer
+                    System.Buffer.BlockCopy(addressBytes, 0, myBuffer, 4, addressBytes.Length);
+                    System.Buffer.BlockCopy(portBytes, 0, myBuffer, 4 + addressBytes.Length, portBytes.Length);
+                    System.Buffer.BlockCopy(cmdBytes, 0, myBuffer, 4 + addressBytes.Length + portBytes.Length, cmdBytes.Length);
+                    System.Buffer.BlockCopy(myBuffer, 0, e.Buffer, e.Offset, myBuffer.Length);
+                    break;
+
+                case 0:
+                    replyMsg = msg;
+                    replyMsg.command = 0;
+
+                    intBytes = BitConverter.GetBytes(16);
+                    addressBytes = replyMsg.peerIP.GetAddressBytes();
+				    portBytes = BitConverter.GetBytes(replyMsg.port);
+					cmdBytes = BitConverter.GetBytes(replyMsg.command);
+
+					System.Buffer.BlockCopy(intBytes, 0, myBuffer, 0, 4);  //prepends length to buffer
+                    System.Buffer.BlockCopy(addressBytes, 0, myBuffer, 4, addressBytes.Length);
+                    System.Buffer.BlockCopy(portBytes, 0, myBuffer, 4 + addressBytes.Length, portBytes.Length);
+                    System.Buffer.BlockCopy(cmdBytes, 0, myBuffer, 4 + addressBytes.Length + portBytes.Length, cmdBytes.Length);
+                    System.Buffer.BlockCopy(myBuffer, 0, e.Buffer, e.Offset, myBuffer.Length);
+                    break;
+            }
+
+            if (e.BytesTransferred > 0 && e.SocketError == SocketError.Success)
+            {
+                bool willRaiseEvent = token.Socket.SendAsync(e);
+                if (!willRaiseEvent)
+                {
+                    ProcessSend(e);
                 }
+
+            }
+            else
+            {
+                CloseClientSocket(e);
             }
         }
+
+        private void ProcessSend(SocketAsyncEventArgs e)
+        {
+            if (e.SocketError == SocketError.Success)
+            {
+                AsyncUserToken token = (AsyncUserToken)e.UserToken;
+
+                // read the next block of data send from the client
+                bool willRaiseEvent = token.Socket.ReceiveAsync(e);
+                if (!willRaiseEvent)
+                {
+                    ProcessReceive(e);
+                }
+            }
+            else
+            {
+                CloseClientSocket(e);
+            }
+        }
+
+        private void CloseClientSocket(SocketAsyncEventArgs e)
+        {
+            AsyncUserToken token = e.UserToken as AsyncUserToken;
+
+            IPEndPoint iep = (IPEndPoint)token.Socket.RemoteEndPoint;
+            //token.m_socket.RemoteEndPoint.Address  & token.m_socket.RemoteEndPoint.Port is what need to be removed from peerList 
+            for (int i = 0; i < peerList.Count;i++ )
+            {
+                if (peerList[i].peerIP == iep.Address) 
+                {
+                    Console.WriteLine("Peer {0} has quit", iep.Address);
+                    peerList.RemoveAt(i);
+                }
+            }
+
+
+            try
+            {
+                token.Socket.Shutdown(SocketShutdown.Send);
+            }
+                // throws if client process has already closed
+             catch (Exception) { }
+            token.Socket.Close();
+
+            // decrement the counter keeping track of the total number of clients connected to the server
+            Interlocked.Decrement(ref numConnectedSockets);
+            maxNumberAcceptedClients.Release();
+            Console.WriteLine("There are {0} clients connected to the server", numConnectedSockets);
+
+            // Free the SocketAsyncEventArg so they can be reused by another client
+            bufferManager.freeBuffer(e);
+            asyncSocketStack.Push(e);
+        }
+
     }
 }

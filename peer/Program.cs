@@ -14,7 +14,7 @@ namespace ServerExperiment
 {
     class Program
     {
-        Random RNG = new Random();
+        static Random RNG = new Random();
         Int32 serverPort, clientPort;
         static TcpClient centralServer = new TcpClient();
 		static List<FileInfo> myFiles;
@@ -22,50 +22,92 @@ namespace ServerExperiment
 		static string consoleCmd;
 		static MessageQueue clientMessageQueue = new MessageQueue();
 		static MessageQueue serverMessageQueue = new MessageQueue();
-			
-		static Server s;
-		static Client c;
+        static public IPAddress myAddress;
+        static public int myPort;
+        static Client c2;
+		
+        
 			
         static void Main(string[] args)
         {
-			
-			//create the list of local files
-			
-            //create the server instance for this client
-            s = new Server();
-            
-			//connect to central server and get P2P server info
+            int numConnections = 9;
+            int receiveSize = 1500;
+                      
+		    Client c;
+   
+            myPort = 4000 + RNG.Next(4000);
+
+            string hostname = Dns.GetHostName();
+            IPHostEntry hostEntry = Dns.GetHostEntry(hostname);
+
+            myAddress = IPAddress.Parse("0.0.0.0");
+
+            byte[] networkBytes = new byte[4];
+            if (hostEntry.AddressList.Length > 1)
+            {
+
+                for (int i=0;i<hostEntry.AddressList.Length;i++)
+                {
+                    if (hostEntry.AddressList[i].AddressFamily.ToString() == ProtocolFamily.InterNetwork.ToString())
+                    {
+                        networkBytes = hostEntry.AddressList[i].GetAddressBytes();
+                        if (networkBytes[0] != (byte)169)   //169 is an autoIP in my network
+                        {
+                            StringBuilder sb = new StringBuilder();
+                            sb.Clear();
+                            sb.Append(networkBytes[0]);
+                            sb.Append(".");
+                            sb.Append(networkBytes[1]);
+                            sb.Append(".");
+                            sb.Append(networkBytes[2]);
+                            sb.Append(".");
+                            sb.Append(networkBytes[3]);
+                            myAddress = IPAddress.Parse(sb.ToString());
+                        }
+                    }
+                }
+            }
+
+            IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Any, myPort);
+
+            Server s = new Server(numConnections, receiveSize);
+
+            s.Init();
+            s.Start(localEndPoint);
+ 
+			//connect to central server and get P2P server info            
             peerInstance clientInstance = new peerInstance();            
-			clientInstance = connectToCentralServer(args[0], s);
+			clientInstance = connectToCentralServer(args[0], myAddress, myPort);
 			
-            //Debug.WriteLine(s.myIPAddress + ", " + s.myPort);
-            //Debug.WriteLine(clientInstance.peerIP + ", " + clientInstance.peerPort);
 			fileDir = args[1];
 			refreshFileList(fileDir);
 			
             //make connection
-            if (s.myIPAddress.Address != clientInstance.peerIP.Address)
+
+            string tempIP = clientInstance.peerIP.ToString();
+           
+            if (tempIP != "0.0.0.0")
             {
-                Console.WriteLine("My server address is: " + s.myIPAddress + ":" + s.myPort);
-                Console.WriteLine("My PEER server address is: " + clientInstance.peerIP + ":" + clientInstance.peerPort);
+                Console.WriteLine("My server address is: {0}:{1}", myAddress, myPort);
+                Console.WriteLine("My peer server address is: {0}:{1}", clientInstance.peerIP, clientInstance.peerPort);
 
 				//create the client instance
                 c = new Client();
                 c.setServer(clientInstance);
                 c.connectToServer();
+                c2 = c;
             }
             else
             {
 				//first machine don't need a client instance
-                Console.WriteLine("First machine.");
-                Console.WriteLine("My address is: " + s.myIPAddress + ":" + s.myPort);
+                Console.WriteLine("First machine in network.");
+                Console.WriteLine("My address is: {0}:{1}", myAddress, myPort);
             }
-			
+
+            
 			while (true)
 			{
-				//check for input
-				checkForInput();
-				
+				checkForInput();	
 			}
 
 
@@ -93,7 +135,7 @@ namespace ServerExperiment
 					
 					switch (ch) 
 					{
-					case '\n':
+					case '\r':    //this is '\n' on unix.  it's only on Windows that it's \r
 						//parse the command and execute the command
 						executeConsoleCommand(consoleCmd);
 						consoleCmd = "";
@@ -114,14 +156,14 @@ namespace ServerExperiment
 			cmd = cmd.TrimEnd();
 			cmd = cmd.TrimStart();
 			
-			string [] cmdParts = cmd.Split(charSeparators, 2, StringSplitOptions.RemoveEmptyEntries); //split on spaces
+			string [] cmdParts = cmd.Split(charSeparators, 3, StringSplitOptions.RemoveEmptyEntries); //split on spaces
 			
 			printMsg(cmdParts[0].ToUpper().Trim());
 			switch (cmdParts[0].ToUpper().Trim())
 			{
 			case "QUIT":
 				//tell clients, server, and central server that this client is leaving.
-				disconnectFromCentralServer ();
+				disconnectFromCentralServer (myAddress, myPort);
 				Environment.Exit(0);
 				break;
 				
@@ -133,17 +175,28 @@ namespace ServerExperiment
 				else
 				{
 					Console.WriteLine("got a get for file: " + cmdParts[1] + "\n");
+                    socketSrv.commandMessage cmdGetMsg = new socketSrv.commandMessage();
+                    cmdGetMsg.command = 2;
+                    cmdGetMsg.fileName = cmdParts[1];
+                    c2.SendCmd(cmdGetMsg);
+
 				}
 				break;
 				
 			case "PUT":
-				if (cmdParts.Length != 2)
+				if (cmdParts.Length != 3)
 				{
-					Console.WriteLine("Syntax Error:\nUsage:\nput filename\n");
+					Console.WriteLine("Syntax Error:\nUsage:\nput filename machine\n");
 				}
 				else
 				{
 					Console.WriteLine("got a put for file: " + cmdParts[1] + "\n");
+                    socketSrv.commandMessage cmdPutMsg = new socketSrv.commandMessage();
+                    cmdPutMsg.command = 3;
+                    cmdPutMsg.fileName = cmdParts[1];
+                    IPHostEntry tempIP = Dns.GetHostEntry(cmdParts[2]);
+                    cmdPutMsg.putIP = tempIP.AddressList[0];
+                    c2.SendCmd(cmdPutMsg);
 				}
 				break;
 				
@@ -200,13 +253,13 @@ namespace ServerExperiment
 			Console.Write("\n");
 		}
 
-		public static void disconnectFromCentralServer ()
+        public static void disconnectFromCentralServer(IPAddress ip, int p)
 		{
 			NetworkStream clientStream = Program.centralServer.GetStream();
 			clientStream.ReadTimeout = System.Threading.Timeout.Infinite;
 			peerInstance peer = new peerInstance();
-			peer.peerIP = s.myIPAddress;
-			peer.peerPort = s.myPort;
+            peer.peerIP = ip;
+            peer.peerPort = p;
 
 			int cmd = 0;  //deregister client
 
@@ -242,10 +295,6 @@ namespace ServerExperiment
 			{
 				//strip off first 4 bytes and get the message length
 				System.Buffer.BlockCopy(buffer, 0, messageLength, 0, sizeof(Int32));
-
-				//if (BitConverter.IsLittleEndian)
-				//    Array.Reverse(messageLength);  //convert from big endian to little endian
-
 				messageBytes = BitConverter.ToInt32(messageLength, 0);
 			}
 
@@ -280,7 +329,7 @@ namespace ServerExperiment
 
 		}
 
-        public static peerInstance connectToCentralServer(string centralServerName, Server s1)
+        public static peerInstance connectToCentralServer(string centralServerName, IPAddress ip, int p)
         {
             try
             {
@@ -296,8 +345,8 @@ namespace ServerExperiment
             NetworkStream clientStream = centralServer.GetStream();
 
             peerInstance peer = new peerInstance();
-            peer.peerIP = s1.myIPAddress;
-            peer.peerPort = s1.myPort;
+            peer.peerIP = ip;
+            peer.peerPort = p;
 
 			int cmd = 1;  //register client
 

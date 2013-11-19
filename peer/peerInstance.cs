@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Net;
+using System.Net.Sockets;
 
 
 namespace socketSrv
@@ -12,20 +13,19 @@ namespace socketSrv
     class peerInstance
     {
         private IPAddress _peerIP;
-        //private string _peerHostname;
         private Int32 _peerPort;
+        private SocketAsyncEventArgs _asyncSocketEvent;
 
+        public SocketAsyncEventArgs asyncSocketEvent
+        {
+            get { return _asyncSocketEvent; }
+            set { _asyncSocketEvent = value; }
+        }
         public IPAddress peerIP
         {
             get { return _peerIP; }
             set { _peerIP = value; }
         }
-
-        //public string peerHostname
-        //{
-        //    get { return _peerHostname; }
-        //    set { _peerHostname = value; }
-        //}
 
         public Int32 peerPort
         {
