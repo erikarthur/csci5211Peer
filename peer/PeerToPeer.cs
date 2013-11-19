@@ -1,4 +1,8 @@
-﻿using socketSrv;
+﻿
+#define WINDOWS   //comment out for linux or unix
+
+
+using socketSrv;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -23,6 +27,14 @@ namespace peer
         public int myPort;
         Client c;
 
+       
+        
+        #if (WINDOWS)
+            const char ENTERKEY = '\r';
+        #else
+            const char ENTERKEY = '\n';
+        #endif
+
         public void connectCentralServer(string[] args)
         {
             int numConnections = 9;
@@ -36,7 +48,7 @@ namespace peer
             myAddress = IPAddress.Parse("0.0.0.0");
 
             byte[] networkBytes = new byte[4];
-            if (hostEntry.AddressList.Length > 1)
+            if (hostEntry.AddressList.Length >= 1)
             {
 
                 for (int i=0;i<hostEntry.AddressList.Length;i++)
@@ -129,7 +141,7 @@ namespace peer
 					
 					switch (ch) 
 					{
-					case '\r':    //this is '\n' on unix.  it's only on Windows that it's \r
+					case ENTERKEY:    //this is '\n' on unix.  it's only on Windows that it's \r
 						//parse the command and execute the command
 						executeConsoleCommand(consoleCmd);
 						consoleCmd = "";
@@ -173,7 +185,7 @@ namespace peer
                     cmdGetMsg.command = 2;
                     cmdGetMsg.fileName = cmdParts[1];
                     cmdGetMsg.peerIP = myAddress;
-                    cmdGetMsg.port = 7000 + RNG.Next(3000);
+                    cmdGetMsg.port = 8001 + RNG.Next(3000);
                     cmdGetMsg.peerHostname = Dns.GetHostName();
                     if (c != null)
                         c.SendCmd(cmdGetMsg);
