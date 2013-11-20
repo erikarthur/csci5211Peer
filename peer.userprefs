@@ -5,6 +5,7 @@
       <File FileName="peer/Program.cs" Line="27" Column="3" />
       <File FileName="peer/server.cs" Line="63" Column="7" />
       <File FileName="peer/client.cs" Line="72" Column="39" />
+      <File FileName="peer/PeerToPeer.cs" Line="2" Column="4" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>

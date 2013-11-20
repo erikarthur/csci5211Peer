@@ -12,7 +12,7 @@ namespace socketSrv
   
     class Server : IDisposable
     {
-		private Queue<commandMessage> serverQueue = new Queue<commandMessage>();
+        private Queue<commandMessage> serverQueue = new Queue<commandMessage>();
         private int numConnections;                     // the maximum number of connections the sample is designed to handle simultaneously 
         private int receiveBufferSize;                  // buffer size to use for each socket I/O operation 
         BufferManager bufferManager;                    // represents a large reusable set of buffers for all socket operations
@@ -172,7 +172,7 @@ namespace socketSrv
         {
             commandMessage returnMsg = new commandMessage();
             byte[] msgLen = new byte[4];
-			byte[] fileNameBytes = new byte[50];
+            byte[] fileNameBytes = new byte[50];
             Int32 bufferCnt = 0;
 
             System.Buffer.BlockCopy(buf, bufferCnt, msgLen, 0, msgLen.Length);
@@ -196,26 +196,27 @@ namespace socketSrv
             returnMsg.port = BitConverter.ToInt32(portBytes, 0);
             returnMsg.command = BitConverter.ToInt32(cmdBytes, 0);
         
-			
-			switch (returnMsg.command)
-			{
-				case 2:	
-					//rest of the buffer is the filename to send
-					int fileByteCnt = bufBytes - bufferCnt;
-					System.Buffer.BlockCopy(buf, bufferCnt, fileNameBytes, 0, fileByteCnt);
-					StringBuilder sb = new StringBuilder();
-					sb.Clear();
-					char[] byteArray = new char[2];
-					for (int i=0;i<fileByteCnt/2;i++)
-					{
-						System.Buffer.BlockCopy(buf,(fileByteCnt+i*2)-2,byteArray,0,2);
-						sb.Append(byteArray[0]);
-					}
-				
-					returnMsg.fileName = sb.ToString();
-					break;
-			}
-			
+            
+            switch (returnMsg.command)
+            {
+                case 2: 
+                    //rest of the buffer is the filename to send
+                    int fileByteCnt = bufBytes - bufferCnt;
+                    System.Buffer.BlockCopy(buf, bufferCnt, fileNameBytes, 0, fileByteCnt);
+                    StringBuilder sb = new StringBuilder();
+                    sb.Clear();
+                    char[] byteArray = new char[2];
+                    for (int i=0;i<fileByteCnt/2;i++)
+                    {
+                        System.Buffer.BlockCopy(buf,(fileByteCnt+i*2)-2,byteArray,0,2);
+                        sb.Append(byteArray[0]);
+                    }
+                
+                    returnMsg.fileName = sb.ToString();
+					serverQueue.Enqueue(returnMsg);
+                    break;
+            }
+            
 
             return returnMsg;
         }
@@ -313,11 +314,11 @@ namespace socketSrv
                     System.Buffer.BlockCopy(cmdBytes, 0, myBuffer, 4 + addressBytes.Length + portBytes.Length, cmdBytes.Length);
                     System.Buffer.BlockCopy(myBuffer, 0, e.Buffer, e.Offset, myBuffer.Length);
                     break;
-			case 2:
-				Console.WriteLine("Received GET cmd for {0} from {1}.  Reply on {2}\n", 
-				                  msg.fileName, msg.peerIP, msg.port);
-				//need to send msg to peer
-				break;
+                case 2:
+                Console.WriteLine("Received GET cmd for {0} from {1}.  Reply on {2}\n", 
+                                  msg.fileName, msg.peerIP, msg.port);
+                //need to send msg to peer
+                break;
             }
 
             if (e.BytesTransferred > 0 && e.SocketError == SocketError.Success)

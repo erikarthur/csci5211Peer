@@ -504,7 +504,7 @@ namespace peer
 }
 =======
 ﻿
-#define WINDOWS   //comment out for linux or unix
+#undef WINDOWS   //comment out for linux or unix
 
 
 using socketSrv;
@@ -534,8 +534,9 @@ namespace peer
         Client c;
 		Server s;
 
-       
-        
+        Queue<commandMessage> serverQueue = new Queue<commandMessage>();
+        Queue<commandMessage> clientQueue = new Queue<commandMessage>();
+               
         #if (WINDOWS)
             const char ENTERKEY = '\r';
         #else
@@ -622,10 +623,56 @@ namespace peer
         {
             while (true)
 			{
-				checkForInput();	
+				checkForInput();
+                serverQueue.Clear();
+                serverQueue = s.returnServerQueue();
+                processQueue(serverQueue);	
+                //clientQueue = 
 			}
         }
 
+        public int fileLocal(string fName)
+        {
+            int fileIndex = int.MaxValue;
+            
+            for (int i=0; i<myFiles.Count();i++)
+            {
+                if (myFiles[i].Name == fName)
+                    fileIndex = i;
+            }   
+            return fileIndex;
+        }
+
+                public void processQueue(Queue<commandMessage> msgQueue)
+        {
+            commandMessage msg = new commandMessage();
+            for (int i=0;i<msgQueue.Count(); i++)
+            {
+                msg = msgQueue.Dequeue();
+                
+                switch (msg.command)
+                {
+                case 2:  //get file
+                        int fileIndex = fileLocal(msg.fileName);
+                        if (fileIndex != int.MaxValue)
+                        {
+                            fileTransport g = new fileTransport();
+                            msg.fileName = myFiles[fileIndex].FullName;
+                            g.sendFile(msg);
+                        }
+                        
+                        //need to rebroadcast msg to peers
+                        
+                        break;
+                case 3:  //put file
+                        fileTransport g = new fileTransport();
+                        g.getFile(msg);
+                        break;
+                        
+                }
+            }
+        }
+        
        public void checkForInput()
 		{
 			ConsoleKeyInfo cki = new ConsoleKeyInfo();
@@ -704,9 +751,9 @@ namespace peer
                     cmdGetMsg.peerHostname = Dns.GetHostName();
 					
 					//create the TCP Listener Port
-					getFile g = new getFile();
-					Thread t = new Thread(g.getFileFromNet);
-					t.Start(cmdGetMsg);
+					fileTransport g = new fileTransport();
+                    Thread t = new Thread(g.getFile);
+                    t.Start(cmdGetMsg);
 					
 					//signal client and servers to send message to their peers.
                     if (c != null)
