@@ -213,6 +213,7 @@ namespace socketSrv
                     }
                 
                     returnMsg.fileName = sb.ToString();
+					serverQueue.Enqueue(returnMsg);
                     break;
             }
             
