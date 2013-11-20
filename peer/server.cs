@@ -56,7 +56,7 @@ namespace socketSrv
 			
 			if (serverQueue.Count > 1)
 			{
-				int i = 0;
+				
 				//lock(serverQueue)
 				//{
 				serverQueue.Clear();

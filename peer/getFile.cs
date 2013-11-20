@@ -93,7 +93,7 @@ namespace peer
 			byte [] fileNameSizeBytes = new byte[4];
 			byte [] fileNameBytes = new byte[255];
 			byte[] buffer = new byte[1500];
-			int messageSize, fileSize, fileNameSize, cmdNum, bufCnt;
+			int messageSize, fileSize, fileNameSize, bufCnt;
 			string fileName;
 			
 			FileInfo fi1 = new FileInfo(cmd.fileName);

@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Messaging;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -18,7 +17,7 @@ namespace peer
     class PeerToPeer
     {
         Random RNG = new Random();
-        Int32 serverPort, clientPort;
+        //Int32 serverPort, clientPort;
         TcpClient centralServer = new TcpClient();
         List<FileInfo> myFiles;
         string fileDir;
@@ -30,7 +29,7 @@ namespace peer
 		Server s;
 		
 		List<commandMessage> serverQueue = new List<commandMessage>();
-		Queue<commandMessage> clientQueue = new Queue<commandMessage>();
+		List<commandMessage> clientQueue = new List<commandMessage>();
  
         #if (WINDOWS)
             const char ENTERKEY = '\r';
@@ -121,10 +120,8 @@ namespace peer
 				checkForInput();
 				serverQueue.Clear();
 				serverQueue = s.returnServerQueue();
-				int i;
 				if (serverQueue.Count != 0)
-					i = 1;
-					//processQueue(serverQueue);
+					processQueue(serverQueue);
 				//clientQueue = 
 			}
         }
@@ -141,12 +138,13 @@ namespace peer
 			return fileIndex;
 		}
 		
-		public void processQueue(Queue<commandMessage> msgQueue)
+		public void processQueue(List<commandMessage> msgQueue)
 		{
 			commandMessage msg = new commandMessage();
 			for (int i=0;i<msgQueue.Count(); i++)
 			{
-				msg = msgQueue.Dequeue();
+                msg = msgQueue[i];
+                msgQueue.RemoveAt(i);
 				
 				switch (msg.command)
 				{
@@ -163,8 +161,8 @@ namespace peer
 						
 						break;
 				case 3:  //put file
-						fileTransport g = new fileTransport();
-						g.getFile(msg);
+						fileTransport g2 = new fileTransport();
+						g2.getFile(msg);
 						break;
 						
 				}
