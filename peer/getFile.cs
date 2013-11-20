@@ -18,7 +18,7 @@ namespace peer
 			server.Start();
 			TcpClient tcpFIleNetClient = server.AcceptTcpClient();
 			
-			IPAddress remoteMachine = (IPAddress)tcpFIleNetClient.Client.RemoteEndPoint;
+			IPAddress remoteMachine = IPAddress.Parse(tcpFIleNetClient.Client.RemoteEndPoint.ToString());
 			
 			Console.WriteLine("\n{0} Connected.  Starting file transfer\n", remoteMachine);
 			
@@ -60,7 +60,7 @@ namespace peer
 				//got it all
 				//open fileStream and write the bytes
 				FileStream fs = new FileStream(fileName, FileMode.CreateNew);
-				for (int i=byteLeft;i<buffer.Length;i++)
+				for (int i=bytesLeft;i<buffer.Length;i++)
 				{
 					fs.WriteByte(buffer[i]);	
 				}
