@@ -159,31 +159,50 @@ namespace socketSrv
         {
             commandMessage returnMsg = new commandMessage();
             byte[] msgLen = new byte[4];
+			byte[] fileNameBytes = new byte[50];
             Int32 bufferCnt = 0;
 
             System.Buffer.BlockCopy(buf, bufferCnt, msgLen, 0, msgLen.Length);
             int messageLength = BitConverter.ToInt32(msgLen, 0);
             bufferCnt += msgLen.Length;
+           
+            byte[] addressBytes = new byte[4];
+            byte[] portBytes = new byte[sizeof(Int32)];
+            byte[] cmdBytes = new byte[sizeof(Int32)];
+            
+            System.Buffer.BlockCopy(buf, bufferCnt, addressBytes, 0, addressBytes.Length);
+            bufferCnt += addressBytes.Length;
 
-            if (messageLength == bufBytes)
-            {
-                byte[] addressBytes = new byte[4];
-                byte[] portBytes = new byte[sizeof(Int32)];
-                byte[] cmdBytes = new byte[sizeof(Int32)];
-                
-                System.Buffer.BlockCopy(buf, bufferCnt, addressBytes, 0, addressBytes.Length);
-                bufferCnt += addressBytes.Length;
+            System.Buffer.BlockCopy(buf, bufferCnt, portBytes, 0, portBytes.Length);
+            bufferCnt += portBytes.Length;
 
-                System.Buffer.BlockCopy(buf, bufferCnt, portBytes, 0, portBytes.Length);
-                bufferCnt += portBytes.Length;
+            System.Buffer.BlockCopy(buf, bufferCnt, cmdBytes, 0, cmdBytes.Length);
+            bufferCnt += cmdBytes.Length;
 
-                System.Buffer.BlockCopy(buf, bufferCnt, cmdBytes, 0, cmdBytes.Length);
-                bufferCnt += cmdBytes.Length;
-
-                returnMsg.peerIP = new IPAddress(addressBytes);
-                returnMsg.port = BitConverter.ToInt32(portBytes, 0);
-                returnMsg.command = BitConverter.ToInt32(cmdBytes, 0);
-            }
+            returnMsg.peerIP = new IPAddress(addressBytes);
+            returnMsg.port = BitConverter.ToInt32(portBytes, 0);
+            returnMsg.command = BitConverter.ToInt32(cmdBytes, 0);
+        
+			
+			switch (returnMsg.command)
+			{
+				case 2:	
+					//rest of the buffer is the filename to send
+					int fileByteCnt = bufBytes - bufferCnt;
+					System.Buffer.BlockCopy(buf, bufferCnt, fileNameBytes, 0, fileByteCnt);
+					StringBuilder sb = new StringBuilder();
+					sb.Clear();
+					char[] byteArray = new char[2];
+					for (int i=0;i<fileByteCnt/2;i++)
+					{
+						System.Buffer.BlockCopy(buf,(fileByteCnt+i*2)-2,byteArray,0,2);
+						sb.Append(byteArray[0]);
+					}
+				
+					returnMsg.fileName = sb.ToString();
+					break;
+			}
+			
 
             return returnMsg;
         }
@@ -281,6 +300,9 @@ namespace socketSrv
                     System.Buffer.BlockCopy(cmdBytes, 0, myBuffer, 4 + addressBytes.Length + portBytes.Length, cmdBytes.Length);
                     System.Buffer.BlockCopy(myBuffer, 0, e.Buffer, e.Offset, myBuffer.Length);
                     break;
+			case 2:
+				Console.WriteLine("got a get from my client\n");
+				break;
             }
 
             if (e.BytesTransferred > 0 && e.SocketError == SocketError.Success)
