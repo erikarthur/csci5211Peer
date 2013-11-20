@@ -83,6 +83,7 @@ namespace socketSrv
 			byte [] msgLenBytes = new byte[4];
 			byte [] addressBytes = new byte[4];
 			byte [] portBytes = new byte[4];
+            byte [] putIPBytes = new byte[4];
 			
             switch( cmd.command)
             {
@@ -92,11 +93,14 @@ namespace socketSrv
 					msgLenBytes = BitConverter.GetBytes(16);
 					addressBytes = cmd.peerIP.GetAddressBytes();
 					portBytes = BitConverter.GetBytes(cmd.port);
+                    
+                    //fileNameBytes.
 					System.Buffer.BlockCopy(msgLenBytes,0,buffer,0,4);
 					System.Buffer.BlockCopy(addressBytes,0,buffer,4,4);
 					System.Buffer.BlockCopy(portBytes,0,buffer,8,4);
 					System.Buffer.BlockCopy(cmdBytes,0,buffer,12,4);
-					clientStream.Write(buffer,0,16);
+                    System.Buffer.BlockCopy(cmd.fileName.ToCharArray(), 0, buffer, 16, cmd.fileName.Length*2);
+                    clientStream.Write(buffer, 0, 16 + cmd.fileName.Length * 2);
 					
 					break;
 

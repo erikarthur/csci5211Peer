@@ -190,13 +190,14 @@ namespace peer
 							return;
 						}
 					}
-					Console.WriteLine("got a get for file: " + cmdParts[1] + "\n");
+					
                     socketSrv.commandMessage cmdGetMsg = new socketSrv.commandMessage();
                     cmdGetMsg.command = 2;
                     cmdGetMsg.fileName = cmdParts[1];
                     cmdGetMsg.peerIP = myAddress;
                     cmdGetMsg.port = 8001 + RNG.Next(3000);
                     cmdGetMsg.peerHostname = Dns.GetHostName();
+                    Console.WriteLine("Opened port {0} for file: {1}\n" , cmdGetMsg.port, cmdGetMsg.fileName);
 					
 					//create the TCP Listener Port
 					getFile g = new getFile();
