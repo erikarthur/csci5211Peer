@@ -83,6 +83,7 @@ namespace socketSrv
 			byte [] msgLenBytes = new byte[4];
 			byte [] addressBytes = new byte[4];
 			byte [] portBytes = new byte[4];
+            byte[]  fileNameBytes = new byte[75];
 			
             switch( cmd.command)
             {
@@ -96,8 +97,18 @@ namespace socketSrv
 					System.Buffer.BlockCopy(addressBytes,0,buffer,4,4);
 					System.Buffer.BlockCopy(portBytes,0,buffer,8,4);
 					System.Buffer.BlockCopy(cmdBytes,0,buffer,12,4);
-					clientStream.Write(buffer,0,16);
-					
+                    
+                    UTF8Encoding utf8 = new UTF8Encoding();
+                    fileNameBytes = utf8.GetBytes(cmd.fileName);
+                    int fileNameLen = utf8.GetByteCount(cmd.fileName);
+                    System.Buffer.BlockCopy(fileNameBytes, 0, buffer, 16, fileNameLen);
+
+                    int msgLen = 16 + fileNameLen;
+                    msgLenBytes = BitConverter.GetBytes(msgLen);
+                    System.Buffer.BlockCopy(msgLenBytes, 0, buffer, 0, 4);
+
+                    clientStream.Write(buffer, 0, msgLen);
+                    
 					break;
 
                 case 3:     //put file
