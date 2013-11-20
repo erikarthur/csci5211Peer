@@ -1,5 +1,5 @@
 ﻿
-#define WINDOWS   //comment out for linux or unix
+#undef WINDOWS   //comment out for linux or unix
 
 
 using socketSrv;
@@ -11,6 +11,7 @@ using System.Messaging;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 
 namespace peer
 {
@@ -22,10 +23,11 @@ namespace peer
         List<FileInfo> myFiles;
         string fileDir;
         string consoleCmd;
-        MessageQueue clientMessageQueue = new MessageQueue();
+        
         IPAddress myAddress;
         public int myPort;
         Client c;
+		Server s;
 
        
         
@@ -75,7 +77,7 @@ namespace peer
 
             IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Any, myPort);
 
-            Server s = new Server(numConnections, receiveSize);
+            s = new Server(numConnections, receiveSize);
 
             s.Init();
             s.Start(localEndPoint);
@@ -180,6 +182,14 @@ namespace peer
 				}
 				else
 				{
+					for (int i=0;i<myFiles.Count;i++)
+					{
+						if (myFiles[i].Name.ToUpper() == cmdParts[1].ToUpper())
+						{
+							Console.WriteLine("File: {0} is already on the system\n", cmdParts[1]);
+							return;
+						}
+					}
 					Console.WriteLine("got a get for file: " + cmdParts[1] + "\n");
                     socketSrv.commandMessage cmdGetMsg = new socketSrv.commandMessage();
                     cmdGetMsg.command = 2;
@@ -187,8 +197,16 @@ namespace peer
                     cmdGetMsg.peerIP = myAddress;
                     cmdGetMsg.port = 8001 + RNG.Next(3000);
                     cmdGetMsg.peerHostname = Dns.GetHostName();
+					
+					//create the TCP Listener Port
+					getFile g = new getFile();
+					Thread t = new Thread(g.getFileFromNet);
+					t.Start(cmdGetMsg);
+					
+					//signal client and servers to send message to their peers.
                     if (c != null)
                         c.SendCmd(cmdGetMsg);
+					s.SendCmd(cmdGetMsg);
 
 				}
 				break;
@@ -208,6 +226,7 @@ namespace peer
                     cmdPutMsg.putIP = tempIP.AddressList[0];
                     if (c != null)
                         c.SendCmd(cmdPutMsg);
+					
 				}
 				break;
 				
@@ -223,6 +242,11 @@ namespace peer
 				Console.Write("\nUnrecognized command.  Check syntax and re-enter\n");
 				break;
 			}
+		}
+		
+		public void openSocketWaitForFile(socketSrv.commandMessage commandcmdGetMsg)
+		{
+			return;	
 		}
 		
 		public void printMsg(string msg)

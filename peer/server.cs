@@ -21,6 +21,7 @@ namespace socketSrv
         int numConnectedSockets;                        // the total number of clients connected to the server 
         Semaphore maxNumberAcceptedClients;
         public List<peerInstance> peerList;
+		public List<SocketAsyncEventArgs> myAsyncList = new List<SocketAsyncEventArgs>();
         public int serverPort;
 
         public Server(int numConns, int receiveSize)
@@ -116,6 +117,8 @@ namespace socketSrv
                 numConnectedSockets);
 
             SocketAsyncEventArgs socketEventArgs = asyncSocketStack.Pop();
+			myAsyncList.Add(socketEventArgs);
+			
             ((AsyncUserToken)socketEventArgs.UserToken).Socket = e.AcceptSocket;
 
             IPEndPoint iep = (IPEndPoint)e.AcceptSocket.RemoteEndPoint;
@@ -342,11 +345,63 @@ namespace socketSrv
             Interlocked.Decrement(ref numConnectedSockets);
             maxNumberAcceptedClients.Release();
             Console.WriteLine("There are {0} clients connected to the server", numConnectedSockets);
-
+			
+			for (int i=0;i<myAsyncList.Count;i++)
+			{
+				if (myAsyncList[i] == e)
+					myAsyncList.RemoveAt(i);
+			}
+			
             // Free the SocketAsyncEventArg so they can be reused by another client
             bufferManager.freeBuffer(e);
             asyncSocketStack.Push(e);
         }
+		
+		public void SendCmd(commandMessage cmd)
+		{
+			byte [] buffer = new byte[1500];
+			byte [] cmdBytes = new byte[4];
+			byte [] msgLenBytes = new byte[4];
+			byte [] addressBytes = new byte[4];
+			byte [] portBytes = new byte[4];
+			
+			Console.WriteLine("\nSent request to client machine\n");
+			cmdBytes = BitConverter.GetBytes(cmd.command);
+			msgLenBytes = BitConverter.GetBytes(16);
+			addressBytes = cmd.peerIP.GetAddressBytes();
+			portBytes = BitConverter.GetBytes(cmd.port);
+			
+			System.Buffer.BlockCopy(msgLenBytes,0,buffer,0,4);
+			System.Buffer.BlockCopy(addressBytes,0,buffer,4,4);
+			System.Buffer.BlockCopy(portBytes,0,buffer,8,4);
+			System.Buffer.BlockCopy(cmdBytes,0,buffer,12,4);
+			
+			AsyncUserToken token;   // = (AsyncUserToken)e.UserToken;
+			
+			for (int i=0;i<myAsyncList.Count;i++)
+			{
+				System.Buffer.BlockCopy(buffer, 0, myAsyncList[i].Buffer, myAsyncList[i].Offset, 16);
+				token = (AsyncUserToken)myAsyncList[i].UserToken;
+				if (myAsyncList[i].BytesTransferred > 0 && myAsyncList[i].SocketError == SocketError.Success)
+		            {
+		                bool willRaiseEvent = token.Socket.SendAsync(myAsyncList[i]);
+		                
+						if (!willRaiseEvent)
+		                {
+		                    ProcessSend(myAsyncList[i]);
+		                }
+					
+		            }
+		            else
+		            {
+		                CloseClientSocket(myAsyncList[i]);
+		            }
+			}
+			
+			//clientStream.Write(buffer,0,16);
+			
+			return;	
+		}
 
     }
 }

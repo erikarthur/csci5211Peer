@@ -78,11 +78,27 @@ namespace socketSrv
 
         public void SendCmd (socketSrv.commandMessage cmd)
         {
+			byte [] buffer = new byte[1500];
+			byte [] cmdBytes = new byte[4];
+			byte [] msgLenBytes = new byte[4];
+			byte [] addressBytes = new byte[4];
+			byte [] portBytes = new byte[4];
+			
             switch( cmd.command)
             {
                 case 2:    //get file
-                    Console.WriteLine("got a get");
-                    break;
+                    Console.WriteLine("\nSent request to client machine\n");
+					cmdBytes = BitConverter.GetBytes(cmd.command);
+					msgLenBytes = BitConverter.GetBytes(16);
+					addressBytes = cmd.peerIP.GetAddressBytes();
+					portBytes = BitConverter.GetBytes(cmd.port);
+					System.Buffer.BlockCopy(msgLenBytes,0,buffer,0,4);
+					System.Buffer.BlockCopy(addressBytes,0,buffer,4,4);
+					System.Buffer.BlockCopy(portBytes,0,buffer,8,4);
+					System.Buffer.BlockCopy(cmdBytes,0,buffer,12,4);
+					clientStream.Write(buffer,0,16);
+					
+					break;
 
                 case 3:     //put file
                     Console.WriteLine("got a put");
