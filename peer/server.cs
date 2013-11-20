@@ -12,6 +12,7 @@ namespace socketSrv
   
     class Server : IDisposable
     {
+		private Queue<commandMessage> serverQueue = new Queue<commandMessage>();
         private int numConnections;                     // the maximum number of connections the sample is designed to handle simultaneously 
         private int receiveBufferSize;                  // buffer size to use for each socket I/O operation 
         BufferManager bufferManager;                    // represents a large reusable set of buffers for all socket operations
@@ -42,7 +43,19 @@ namespace socketSrv
             this.Dispose();
             GC.SuppressFinalize(this);
         }
-
+		
+		public Queue<commandMessage> returnServerQueue()
+		{
+			Queue<commandMessage> tempQueue = new Queue<commandMessage>();
+			tempQueue = serverQueue;
+			
+			lock(serverQueue)
+			{
+				serverQueue.Clear();
+			}
+			return tempQueue;
+		}
+		
         public void Init()
         {
             // Allocates one large byte buffer which all I/O operations use a piece of.  This gaurds 
@@ -301,7 +314,9 @@ namespace socketSrv
                     System.Buffer.BlockCopy(myBuffer, 0, e.Buffer, e.Offset, myBuffer.Length);
                     break;
 			case 2:
-				Console.WriteLine("got a get from my client\n");
+				Console.WriteLine("Received GET cmd for {0} from {1}.  Reply on {2}\n", 
+				                  msg.fileName, msg.peerIP, msg.port);
+				//need to send msg to peer
 				break;
             }
 
