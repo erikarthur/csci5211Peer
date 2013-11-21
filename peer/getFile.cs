@@ -62,22 +62,23 @@ namespace peer
 			fileName = utf8.GetString(fileNameBytes);
 
 			int bytesLeft = (24 + fileNameSize + fileSize);
-			
-			if (numBytes == bytesLeft)  //may need messageSize here
+            BinaryWriter fs = new BinaryWriter(File.Open(fileName, FileMode.CreateNew));
+            
+            fs.Write(buffer, 24 + fileNameSize, numBytes - (24 + fileNameSize));
+
+            int recBytes = numBytes;
+
+            while (recBytes < bytesLeft)  //may need messageSize here
 			{
-				//got it all
-				//open fileStream and write the bytes
-				BinaryWriter fs = new BinaryWriter(File.Open(fileName, FileMode.CreateNew));
-                //for (int i = 24 + fileNameSize; i < numBytes; i++)
-                //{
-                fs.Write(buffer, 24 + fileNameSize, numBytes - 24 + fileNameSize);	
-                //}
-				fs.Close();
+                numBytes = fileNetStream.Read(buffer, 0, 1500);
+                fs.Write(buffer, 0, numBytes);
+                recBytes += numBytes;
+                Console.Write("*");
 			}
+            fs.Close();
+
+            Console.WriteLine("\nFile transfer complete. {0} bytes written\n", recBytes);
 			
-			Console.WriteLine("\nFile transfer complete. {0} bytes written\n", numBytes);
-			
-			//bugbug need to cover the larger than 1500 bytes case.
 			fileNetStream.Close();
 			tcpFIleNetClient.Close();
 		}
