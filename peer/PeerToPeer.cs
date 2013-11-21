@@ -1,5 +1,5 @@
 ﻿
-#undef WINDOWS   //comment out for linux or unix
+#undef WINDOWS   //undef for linux or unix
 
 
 using socketSrv;
@@ -118,10 +118,14 @@ namespace peer
             while (true)
 			{
 				checkForInput();
-				serverQueue.Clear();
+				
 				serverQueue = s.returnServerQueue();
-				if (serverQueue.Count != 0)
+				
+				if (serverQueue.Count > 0)
+				{
 					processQueue(serverQueue);
+					serverQueue.Clear();
+				}
 				//clientQueue = 
 			}
         }

@@ -81,9 +81,12 @@ namespace peer
 			
 			socketSrv.commandMessage cmd = (socketSrv.commandMessage)data;
 			
+			Socket sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+			
 			IPEndPoint iep = new IPEndPoint(cmd.peerIP, cmd.port);
-			TcpClient tcpSendFile = new TcpClient(iep);
-			NetworkStream netStream = tcpSendFile.GetStream();
+			sock.Connect(iep);
+			//TcpClient tcpSendFile = new TcpClient(iep);
+			NetworkStream netStream = new NetworkStream(sock);
 			
 			byte [] messageSizeBytes = new byte[4];
 			byte [] addressBytes = new byte[4];
@@ -109,23 +112,23 @@ namespace peer
 			bufCnt = 0;
 			
 			messageSizeBytes = BitConverter.GetBytes(0);
-			System.Buffer.BlockCopy(buffer, 0, messageSizeBytes, 0, 4);
+			System.Buffer.BlockCopy(messageSizeBytes, 0, buffer, 0,  4);
 			bufCnt += 4;
 
 			addressBytes = cmd.peerIP.GetAddressBytes();
-			System.Buffer.BlockCopy(buffer, bufCnt, addressBytes, 0, 4);
+			System.Buffer.BlockCopy(addressBytes, 0, buffer, bufCnt, 4);
 			bufCnt += 4;
 
 			portBytes = BitConverter.GetBytes(cmd.port);
-			System.Buffer.BlockCopy(buffer, bufCnt, cmdBytes, 0, 4);
+			System.Buffer.BlockCopy(portBytes, 0, buffer, bufCnt, 4);
 			bufCnt += 4;
 			
 			cmdBytes = BitConverter.GetBytes(cmd.command);
-			System.Buffer.BlockCopy(buffer, bufCnt, cmdBytes, 0, 4);
+			System.Buffer.BlockCopy(cmdBytes, 0, buffer, bufCnt, 4);
 			bufCnt += 4;
 			
 			fileSizeBytes = BitConverter.GetBytes(fileSize);
-			System.Buffer.BlockCopy(buffer, bufCnt, fileSizeBytes, 0, 4);	
+			System.Buffer.BlockCopy(fileSizeBytes, 0, buffer, bufCnt, 4);	
 			bufCnt += 4;
 				
 			UTF8Encoding encoder = new UTF8Encoding();
@@ -133,14 +136,14 @@ namespace peer
 			fileNameSize = encoder.GetByteCount(fileName);
 				
 			fileNameSizeBytes = BitConverter.GetBytes(fileNameSize);
-			System.Buffer.BlockCopy(buffer, bufCnt, fileNameSizeBytes, 0, 4);
+			System.Buffer.BlockCopy(fileNameSizeBytes, 0, buffer, bufCnt, 4);
 			bufCnt += 4;
 			
 			fileNameBytes = encoder.GetBytes(fileName);
 			System.Buffer.BlockCopy(fileNameBytes, 0, buffer, bufCnt, fileNameSize);
 			bufCnt += fileNameSize;
 				
-			using (FileStream fs = File.OpenRead(cmd.fileName))
+			using (BinaryReader fs = new BinaryReader(File.Open(cmd.fileName, FileMode.Open)))
 	        {
 	            int readCnt = fs.Read(buffer,bufCnt,buffer.Length-bufCnt);
 	            while (readCnt > 0)
@@ -154,9 +157,9 @@ namespace peer
 					readCnt = fs.Read(buffer,bufCnt,buffer.Length);
 	            }
 	        }
-			
+			Console.WriteLine("File sent.  {0} bytes put on wire.", bufCnt);
 			netStream.Close();
-			tcpSendFile.Close();
+			sock.Close();
 			return;	
 		}
 	}
