@@ -154,13 +154,13 @@ namespace peer
 			using (BinaryReader fs = new BinaryReader(File.Open(cmd.fileName, FileMode.Open)))
 	        {
 	            int readCnt = fs.Read(buffer,bufCnt,buffer.Length-bufCnt);
+                messageSizeBytes = BitConverter.GetBytes(bufCnt);
+                System.Buffer.BlockCopy(messageSizeBytes, 0, buffer, 0, 4);
 	            while (readCnt > 0)
 	            {
 					bufCnt += readCnt;
                     totalByteCnt += readCnt;
-					messageSizeBytes = BitConverter.GetBytes(bufCnt);
-					System.Buffer.BlockCopy(messageSizeBytes, 0, buffer, 0, 4);
-	                //ready to send  - have bufCnt bytes in buffer
+                    Console.Write("*");
 					netStream.Write(buffer,0,bufCnt);
 					bufCnt = 0;
 					readCnt = fs.Read(buffer,bufCnt,buffer.Length);
