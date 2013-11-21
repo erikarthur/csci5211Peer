@@ -149,13 +149,14 @@ namespace peer
 			fileNameBytes = encoder.GetBytes(fileName);
 			System.Buffer.BlockCopy(fileNameBytes, 0, buffer, bufCnt, fileNameSize);
 			bufCnt += fileNameSize;
-				
+            int totalByteCnt = bufCnt;	
 			using (BinaryReader fs = new BinaryReader(File.Open(cmd.fileName, FileMode.Open)))
 	        {
 	            int readCnt = fs.Read(buffer,bufCnt,buffer.Length-bufCnt);
 	            while (readCnt > 0)
 	            {
 					bufCnt += readCnt;
+                    totalByteCnt += readCnt;
 					messageSizeBytes = BitConverter.GetBytes(bufCnt);
 					System.Buffer.BlockCopy(messageSizeBytes, 0, buffer, 0, 4);
 	                //ready to send  - have bufCnt bytes in buffer
@@ -164,7 +165,7 @@ namespace peer
 					readCnt = fs.Read(buffer,bufCnt,buffer.Length);
 	            }
 	        }
-			Console.WriteLine("File sent.  {0} bytes put on wire.", bufCnt);
+            Console.WriteLine("File sent.  {0} bytes put on wire.", totalByteCnt);
 			netStream.Close();
 			sock.Close();
 			return;	
