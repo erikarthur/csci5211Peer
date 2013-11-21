@@ -19,9 +19,9 @@ namespace peer
 			server.Start();
 			TcpClient tcpFIleNetClient = server.AcceptTcpClient();
 			
-			IPAddress remoteMachine = IPAddress.Parse(tcpFIleNetClient.Client.RemoteEndPoint.ToString());
+			//IPAddress remoteMachine = IPAddress.Parse(tcpFIleNetClient.Client.RemoteEndPoint.ToString());
 			
-			Console.WriteLine("\n{0} Connected.  Starting file transfer\n", remoteMachine);
+			//Console.WriteLine("\n{0} Connected.  Starting file transfer\n", remoteMachine);
 			
 			byte [] buffer = new byte[1500];
 			
@@ -29,42 +29,49 @@ namespace peer
 			int numBytes = fileNetStream.Read(buffer, 0, 1500);
 			
 			byte [] messageSizeBytes = new byte[4];
+            byte[] addressBytes = new byte[4];
+            byte[] portBytes = new byte[4];
 			byte [] cmdBytes = new byte[4];
 			byte [] fileSizeBytes = new byte[4];
 			byte [] fileNameSizeBytes = new byte[4];
-			byte [] fileNameBytes = new byte[255];
+			
 			int messageSize, fileSize, fileNameSize, cmdNum;
 			string fileName;
 			
 			System.Buffer.BlockCopy(buffer, 0, messageSizeBytes, 0, 4);
-			System.Buffer.BlockCopy(buffer, 4, cmdBytes, 0, 4);
-			System.Buffer.BlockCopy(buffer, 8, fileSizeBytes, 0, 4);	
-			System.Buffer.BlockCopy(buffer, 12, fileNameSizeBytes, 0, 4);
+            System.Buffer.BlockCopy(buffer, 4, addressBytes, 0, 4);
+            System.Buffer.BlockCopy(buffer, 8, portBytes, 0, 4);
+			System.Buffer.BlockCopy(buffer, 12, cmdBytes, 0, 4);
+			System.Buffer.BlockCopy(buffer, 16, fileSizeBytes, 0, 4);	
+			System.Buffer.BlockCopy(buffer, 20, fileNameSizeBytes, 0, 4);
 			
 			messageSize = BitConverter.ToInt32(messageSizeBytes,0);
 			fileSize = BitConverter.ToInt32(fileSizeBytes, 0);
-			fileNameSize = BitConverter.ToInt32(fileNameBytes,0);
+            UTF8Encoding utf8 = new UTF8Encoding();
+
+            fileNameSize = BitConverter.ToInt32(fileNameSizeBytes, 0);
 			cmdNum = BitConverter.ToInt32(cmdBytes,0);
 			if (cmdNum != cmd.command)
 			{
 				//lucy we have a problem
 				//bugbug
 			}
-				
-			System.Buffer.BlockCopy(buffer, 16, fileNameBytes, 0, fileNameSize);
+            byte[] fileNameBytes = new byte[fileNameSize];	
+			System.Buffer.BlockCopy(buffer, 24, fileNameBytes, 0, fileNameSize);
 			
-			fileName = fileNameBytes.ToString();
-			int bytesLeft = (16 + fileNameSize + fileSize);
+			fileName = utf8.GetString(fileNameBytes);
+
+			int bytesLeft = (24 + fileNameSize + fileSize);
 			
 			if (numBytes == bytesLeft)  //may need messageSize here
 			{
 				//got it all
 				//open fileStream and write the bytes
-				FileStream fs = new FileStream(fileName, FileMode.CreateNew);
-				for (int i=bytesLeft;i<buffer.Length;i++)
-				{
-					fs.WriteByte(buffer[i]);	
-				}
+				BinaryWriter fs = new BinaryWriter(File.Open(fileName, FileMode.CreateNew));
+                //for (int i = 24 + fileNameSize; i < numBytes; i++)
+                //{
+                fs.Write(buffer, 24 + fileNameSize, numBytes - 24 + fileNameSize);	
+                //}
 				fs.Close();
 			}
 			

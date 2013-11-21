@@ -1,5 +1,5 @@
 ﻿
-#undef WINDOWS   //undef for linux or unix
+#undef WINDOWS   //comment out for linux or unix
 
 
 using socketSrv;
@@ -103,6 +103,7 @@ namespace peer
                 c.setServer(clientInstance);
                 c.connectToServer();
                 
+
             }
             else
             {

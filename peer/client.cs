@@ -88,7 +88,7 @@ namespace socketSrv
             switch( cmd.command)
             {
                 case 2:    //get file
-                    Console.WriteLine("\nSent request to client machine\n");
+                    Console.WriteLine("\nSent request to server machine\n");
 					cmdBytes = BitConverter.GetBytes(cmd.command);
 					msgLenBytes = BitConverter.GetBytes(16);
 					addressBytes = cmd.peerIP.GetAddressBytes();
