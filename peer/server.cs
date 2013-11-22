@@ -5,7 +5,8 @@ using System.Text;
 using System.Net.Sockets;
 using System.Net;
 using System.Threading;
-
+using peer;
+using ServerExperiment;
 
 namespace socketSrv
 {
@@ -72,6 +73,14 @@ namespace socketSrv
 //				//}
 //			}
 			
+			if (serverQueue.Count > 1)
+			{
+				
+				//lock(serverQueue)
+				//{
+				serverQueue.Clear();
+				//}
+			}
 			
 			return serverQueue;
 		}
@@ -333,8 +342,13 @@ namespace socketSrv
                 case 2:
 	                Console.WriteLine("Received GET cmd for {0} from {1}.  Reply on {2}\n", 
 	                                  msg.fileName, msg.peerIP, msg.port);
+                    
 	                //need to send msg to peer
-					serverQueue.Add(msg);
+                    string fileDir = Program.p2p.getFileDir();
+                    msg.fileName = fileDir + msg.fileName;
+                    fileTransport g = new fileTransport();
+                    g.sendFile(msg);
+					//serverQueue.Add(msg);
 	                break;
             }
 
@@ -426,7 +440,7 @@ namespace socketSrv
 			
 			Console.WriteLine("Sent request to client machine(s)\n");
 			cmdBytes = BitConverter.GetBytes(cmd.command);
-			msgLenBytes = BitConverter.GetBytes(16);
+			//msgLenBytes = BitConverter.GetBytes(16);
 			addressBytes = cmd.peerIP.GetAddressBytes();
 			portBytes = BitConverter.GetBytes(cmd.port);
             fileSizeBytes = BitConverter.GetBytes(0);

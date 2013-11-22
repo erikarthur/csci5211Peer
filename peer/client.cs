@@ -228,14 +228,15 @@ namespace socketSrv
 					
 					System.Buffer.BlockCopy(fileNameSizeBytes, 0, buffer, byteCnt, fileNameSizeBytes.Length);
                     byteCnt += fileNameSizeBytes.Length;
-				
-                    System.Buffer.BlockCopy(fileNameBytes, 0, buffer, 16, fileNameLen);
+
+                    System.Buffer.BlockCopy(fileNameBytes, 0, buffer, byteCnt, fileNameLen);
 
                     int msgLen = byteCnt + fileNameLen;
                     msgLenBytes = BitConverter.GetBytes(msgLen);
                     System.Buffer.BlockCopy(msgLenBytes, 0, buffer, 0, msgLenBytes.Length);
 
                     clientStream.Write(buffer, 0, msgLen);
+                    Console.WriteLine("sent a message of {0} bytes asking for file", msgLen);
                     
 					break;
 
