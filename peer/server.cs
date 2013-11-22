@@ -410,32 +410,50 @@ namespace socketSrv
 			byte [] msgLenBytes = new byte[4];
 			byte [] addressBytes = new byte[4];
 			byte [] portBytes = new byte[4];
+            byte[] fileNameBytes = new byte[75];
+            int byteCnt = 4;
 			
-			Console.WriteLine("\nSent request to client machine\n");
+			Console.WriteLine("Sent request to client machine(s)\n");
 			cmdBytes = BitConverter.GetBytes(cmd.command);
 			msgLenBytes = BitConverter.GetBytes(16);
 			addressBytes = cmd.peerIP.GetAddressBytes();
 			portBytes = BitConverter.GetBytes(cmd.port);
 			
-			System.Buffer.BlockCopy(msgLenBytes,0,buffer,0,4);
-			System.Buffer.BlockCopy(addressBytes,0,buffer,4,4);
-			System.Buffer.BlockCopy(portBytes,0,buffer,8,4);
-			System.Buffer.BlockCopy(cmdBytes,0,buffer,12,4);
-			
+			//System.Buffer.BlockCopy(msgLenBytes,0,buffer,0,4);
+            System.Buffer.BlockCopy(addressBytes, 0, buffer, byteCnt, addressBytes.Length);
+            byteCnt += addressBytes.Length;
+
+            System.Buffer.BlockCopy(portBytes, 0, buffer, byteCnt, portBytes.Length);
+            byteCnt += portBytes.Length;
+
+            System.Buffer.BlockCopy(cmdBytes, 0, buffer, byteCnt, cmdBytes.Length);
+            byteCnt += cmdBytes.Length;
+
+            UTF8Encoding utf8 = new UTF8Encoding();
+            fileNameBytes = utf8.GetBytes(cmd.fileName);
+            int fileNameLen = utf8.GetByteCount(cmd.fileName);
+            System.Buffer.BlockCopy(fileNameBytes, 0, buffer, byteCnt, fileNameLen);
+
+            int msgLen = byteCnt + fileNameLen;
+            msgLenBytes = BitConverter.GetBytes(msgLen);
+            System.Buffer.BlockCopy(msgLenBytes, 0, buffer, 0, msgLenBytes.Length);
+
 			AsyncUserToken token;   // = (AsyncUserToken)e.UserToken;
 			
 			for (int i=0;i<myAsyncList.Count;i++)
 			{
-				System.Buffer.BlockCopy(buffer, 0, myAsyncList[i].Buffer, myAsyncList[i].Offset, 16);
+                System.Buffer.BlockCopy(buffer, 0, myAsyncList[i].Buffer, myAsyncList[i].Offset, msgLen);
 				token = (AsyncUserToken)myAsyncList[i].UserToken;
-				if (myAsyncList[i].BytesTransferred > 0 && myAsyncList[i].SocketError == SocketError.Success)
+				//if (myAsyncList[i].BytesTransferred > 0 && myAsyncList[i].SocketError == SocketError.Success)
+                if (myAsyncList[i].SocketError == SocketError.Success)
 		            {
-		                bool willRaiseEvent = token.Socket.SendAsync(myAsyncList[i]);
+                        token.Socket.Send(buffer, msgLen, SocketFlags.None);
+                        //bool willRaiseEvent = token.Socket.SendAsync(myAsyncList[i]);
 		                
-						if (!willRaiseEvent)
-		                {
-		                    ProcessSend(myAsyncList[i]);
-		                }
+                        //if (!willRaiseEvent)
+                        //{
+                        //    ProcessSend(myAsyncList[i]);
+                        //}
 					
 		            }
 		            else
@@ -443,8 +461,6 @@ namespace socketSrv
 		                CloseClientSocket(myAsyncList[i]);
 		            }
 			}
-			
-			//clientStream.Write(buffer,0,16);
 			
 			return;	
 		}
