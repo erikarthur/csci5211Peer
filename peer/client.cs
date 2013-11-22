@@ -188,6 +188,8 @@ namespace socketSrv
 			byte [] addressBytes = new byte[4];
 			byte [] portBytes = new byte[4];
             byte[]  fileNameBytes = new byte[75];
+			byte[]  fileNameSizeBytes = new byte[4];
+			byte[]  fileSizeBytes = new byte[4];
 			
             switch( cmd.command)
             {
@@ -211,10 +213,22 @@ namespace socketSrv
 
                     System.Buffer.BlockCopy(cmdBytes, 0, buffer, byteCnt, cmdBytes.Length);
                     byteCnt += cmdBytes.Length;
-
+					
+				
+				
                     UTF8Encoding utf8 = new UTF8Encoding();
                     fileNameBytes = utf8.GetBytes(cmd.fileName);
                     int fileNameLen = utf8.GetByteCount(cmd.fileName);
+				
+					fileSizeBytes = BitConverter.GetBytes(0);
+					fileNameSizeBytes = BitConverter.GetBytes(fileNameLen);
+					
+					System.Buffer.BlockCopy(fileSizeBytes, 0, buffer, byteCnt, fileSizeBytes.Length);
+                    byteCnt += fileSizeBytes.Length;
+					
+					System.Buffer.BlockCopy(fileNameSizeBytes, 0, buffer, byteCnt, fileNameSizeBytes.Length);
+                    byteCnt += fileNameSizeBytes.Length;
+				
                     System.Buffer.BlockCopy(fileNameBytes, 0, buffer, 16, fileNameLen);
 
                     int msgLen = byteCnt + fileNameLen;
