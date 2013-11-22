@@ -15,6 +15,7 @@ namespace ServerExperiment
     class Program
     {
         static public PeerToPeer p2p;
+        
         static void Main(string[] args)
         {
             p2p = new PeerToPeer();

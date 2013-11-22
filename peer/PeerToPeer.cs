@@ -1,5 +1,5 @@
 ﻿
-#undef WINDOWS   //comment out for linux or unix
+#define WINDOWS   //comment out for linux or unix
 
 
 using socketSrv;
@@ -153,6 +153,11 @@ namespace peer
 			}	
 			return fileIndex;
 		}
+
+        public string getFileDir()
+        {
+            return fileDir;
+        }
 		
 		public void processQueue(List<commandMessage> msgQueue)
 		{

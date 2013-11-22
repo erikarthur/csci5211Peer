@@ -13,6 +13,7 @@ namespace peer
 	{
 		public void getFile (object data)
 		{
+            Console.WriteLine("in fileTransport - get file");
 			socketSrv.commandMessage cmd = (socketSrv.commandMessage)data;
 			IPEndPoint iep = new IPEndPoint(IPAddress.Any, cmd.port);
 			TcpListener server = new TcpListener(iep);
@@ -88,7 +89,7 @@ namespace peer
 		
 		public void sendFile (object data)
 		{
-			
+            Console.WriteLine("in fileTransport - send file");
 			
 			socketSrv.commandMessage cmd = (socketSrv.commandMessage)data;
 			
