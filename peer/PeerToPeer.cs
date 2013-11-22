@@ -120,11 +120,11 @@ namespace peer
 			{
 				checkForInput();
 				
-                if (isClientMessage())
+                
+                if (c != null)
 				    clientQueue = c.returnClientQueue();
 
-                if (isServerMessage())
-				    serverQueue = s.returnServerQueue();
+                serverQueue = s.returnServerQueue();
 				
 				if (serverQueue.Count > 0)
 				{
