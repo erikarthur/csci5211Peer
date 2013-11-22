@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.IO;
 using System.Text;
+using ServerExperiment;
 
 namespace peer
 {
@@ -62,7 +63,7 @@ namespace peer
 			fileName = utf8.GetString(fileNameBytes);
 
 			int bytesLeft = (24 + fileNameSize + fileSize);
-            BinaryWriter fs = new BinaryWriter(File.Open(fileName, FileMode.CreateNew));
+            BinaryWriter fs = new BinaryWriter(File.Open(cmd.fileDir + fileName, FileMode.CreateNew));
             
             fs.Write(buffer, 24 + fileNameSize, numBytes - (24 + fileNameSize));
 
@@ -81,6 +82,8 @@ namespace peer
 			
 			fileNetStream.Close();
 			tcpFIleNetClient.Close();
+            Program.p2p.refreshFileList(cmd.fileDir);
+            //p2p.refreshFileList(cmd.fileDir);
 		}
 		
 		public void sendFile (object data)

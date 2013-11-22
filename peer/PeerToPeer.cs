@@ -167,9 +167,12 @@ namespace peer
 						break;
 				case 3:  //put file
 						fileTransport g2 = new fileTransport();
+                        msg.fileName = fileDir + msg.fileName;
 						g2.getFile(msg);
 						break;
-						
+                case 0:  //refresh filelist
+                        refreshFileList(fileDir);
+                        break;
 				}
 			}
 		}
@@ -247,6 +250,7 @@ namespace peer
                     socketSrv.commandMessage cmdGetMsg = new socketSrv.commandMessage();
                     cmdGetMsg.command = 2;
                     cmdGetMsg.fileName = cmdParts[1];
+                    cmdGetMsg.fileDir = fileDir;
                     cmdGetMsg.peerIP = myAddress;
                     cmdGetMsg.port = 8001 + RNG.Next(3000);
                     cmdGetMsg.peerHostname = Dns.GetHostName();

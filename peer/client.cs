@@ -88,24 +88,34 @@ namespace socketSrv
             switch( cmd.command)
             {
                 case 2:    //get file
-                    Console.WriteLine("\nSent request to server machine\n");
+                    Console.WriteLine("\nSent request to server machine");
+                    //int basicCmdLen = 16;
+                    int byteCnt = 4;
+
 					cmdBytes = BitConverter.GetBytes(cmd.command);
-					msgLenBytes = BitConverter.GetBytes(16);
+                    //msgLenBytes = BitConverter.GetBytes(basicCmdLen);
 					addressBytes = cmd.peerIP.GetAddressBytes();
 					portBytes = BitConverter.GetBytes(cmd.port);
-					System.Buffer.BlockCopy(msgLenBytes,0,buffer,0,4);
-					System.Buffer.BlockCopy(addressBytes,0,buffer,4,4);
-					System.Buffer.BlockCopy(portBytes,0,buffer,8,4);
-					System.Buffer.BlockCopy(cmdBytes,0,buffer,12,4);
-                    
+                    //System.Buffer.BlockCopy(msgLenBytes, 0, buffer, byteCnt, msgLenBytes.Length);
+                    //byteCnt += msgLenBytes.Length;
+
+                    System.Buffer.BlockCopy(addressBytes, 0, buffer, byteCnt, addressBytes.Length);
+                    byteCnt += addressBytes.Length;
+
+                    System.Buffer.BlockCopy(portBytes, 0, buffer, byteCnt, portBytes.Length);
+                    byteCnt += portBytes.Length;
+
+                    System.Buffer.BlockCopy(cmdBytes, 0, buffer, byteCnt, cmdBytes.Length);
+                    byteCnt += cmdBytes.Length;
+
                     UTF8Encoding utf8 = new UTF8Encoding();
                     fileNameBytes = utf8.GetBytes(cmd.fileName);
                     int fileNameLen = utf8.GetByteCount(cmd.fileName);
                     System.Buffer.BlockCopy(fileNameBytes, 0, buffer, 16, fileNameLen);
 
-                    int msgLen = 16 + fileNameLen;
+                    int msgLen = byteCnt + fileNameLen;
                     msgLenBytes = BitConverter.GetBytes(msgLen);
-                    System.Buffer.BlockCopy(msgLenBytes, 0, buffer, 0, 4);
+                    System.Buffer.BlockCopy(msgLenBytes, 0, buffer, 0, msgLenBytes.Length);
 
                     clientStream.Write(buffer, 0, msgLen);
                     

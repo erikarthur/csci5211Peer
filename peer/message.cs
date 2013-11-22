@@ -12,6 +12,7 @@ namespace socketSrv
 		private Int32 _port;
         private Int32 _command;
         private string _fileName;
+        private string _fileDir;
         private IPAddress _putIP;
 
 
@@ -19,6 +20,12 @@ namespace socketSrv
         {
             get { return _fileName; }
             set { _fileName = value; }
+        }
+
+        public string fileDir
+        {
+            get { return _fileDir; }
+            set { _fileDir = value; }
         }
 
         public IPAddress putIP

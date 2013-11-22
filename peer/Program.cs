@@ -14,9 +14,10 @@ namespace ServerExperiment
 {
     class Program
     {
+        static public PeerToPeer p2p;
         static void Main(string[] args)
         {
-            PeerToPeer p2p = new PeerToPeer();
+            p2p = new PeerToPeer();
             p2p.connectCentralServer(args);
             p2p.runP2PNetwork();
         }
