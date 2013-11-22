@@ -23,6 +23,16 @@ namespace socketSrv
             myServer.peerPort = p.peerPort;
         }
 		
+        public bool isClientMessage()
+        {
+            bool returnBool = false;
+            if (clientQueue.Count > 0)
+                returnBool = true;
+
+            return returnBool;
+        }
+
+
 		public List<commandMessage> returnClientQueue()
 		{
 			checkForData();

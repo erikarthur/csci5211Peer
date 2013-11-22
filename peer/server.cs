@@ -48,7 +48,16 @@ namespace socketSrv
             this.Dispose();
             GC.SuppressFinalize(this);
         }
-		
+
+        public bool isServerMessage()
+        {
+            bool returnBool = false;
+            if (serverQueue.Count > 0)
+                returnBool = true;
+
+            return returnBool;
+        }
+
 		public List<commandMessage> returnServerQueue()
 		{
 			List<commandMessage> tempQueue = new List<commandMessage>();
