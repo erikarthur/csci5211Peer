@@ -120,6 +120,7 @@ namespace peer
 			{
 				checkForInput();
 				
+				clientQueue = c.returnClientQueue();
 				serverQueue = s.returnServerQueue();
 				
 				if (serverQueue.Count > 0)
@@ -127,6 +128,13 @@ namespace peer
 					processQueue(serverQueue);
 					serverQueue.Clear();
 				}
+				
+				if (clientQueue.Count > 0)
+				{
+					processQueue(clientQueue);
+					clientQueue.Clear();
+				}
+				
 				//clientQueue = 
 			}
         }

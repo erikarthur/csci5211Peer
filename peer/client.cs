@@ -15,12 +15,106 @@ namespace socketSrv
         peerInstance myServer = new peerInstance();
         NetworkStream clientStream;
         Timer timer = new Timer();
+		public List<commandMessage> clientQueue = new List<commandMessage>();
 
         public void setServer(peerInstance p)
         {
             myServer.peerIP = p.peerIP;
             myServer.peerPort = p.peerPort;
         }
+		
+		public List<commandMessage> returnClientQueue()
+		{
+			checkForData();
+			List<commandMessage> tempQueue = new List<commandMessage>();
+			tempQueue = clientQueue;
+			
+			if (clientQueue.Count > 1)
+			{
+				
+				//lock(serverQueue)
+				//{
+				clientQueue.Clear();
+				//}
+			}
+			
+			
+			return tempQueue;
+		}
+		
+		public void checkForData()
+		{
+			commandMessage cmd = new commandMessage();
+			cmd.command = Int32.MaxValue;
+			
+			int bufSize = 1500;
+			byte[] buffer = new byte[bufSize];
+			if (clientStream.DataAvailable)
+			{
+				byte [] messageSizeBytes = new byte[4];
+            	byte[] addressBytes = new byte[4];
+            	byte[] portBytes = new byte[4];
+				byte [] cmdBytes = new byte[4];
+				byte [] fileSizeBytes = new byte[4];
+				byte [] fileNameSizeBytes = new byte[4];
+				
+			
+				int messageSize, fileSize, fileNameSize, cmdNum, byteCnt;
+				IPAddress cmdIP;
+				string fileName;
+				
+				//gotta process the data
+				int bytesRead = clientStream.Read(buffer,0,bufSize);
+				if (bytesRead > 0)
+				{
+					byteCnt = 0;
+					System.Buffer.BlockCopy(buffer, byteCnt, messageSizeBytes, 0, messageSizeBytes.Length);
+					byteCnt += messageSizeBytes.Length;
+					messageSize = BitConverter.ToInt32(messageSizeBytes,0);
+					
+					//messageSize should never be greater than 1500 in this case
+					System.Buffer.BlockCopy(buffer, byteCnt, addressBytes, 0, addressBytes.Length);
+					byteCnt += addressBytes.Length;
+					//cmdIP = IPAddress.Parse(
+					string address = "";
+					if (addressBytes.Length == 4)
+					{
+					    address = addressBytes[0].ToString() + "." + addressBytes[1].ToString() + "." +
+							addressBytes[2].ToString() + "." + addressBytes[3].ToString();
+					}
+					
+					cmd.peerIP = IPAddress.Parse(address);
+					
+		            System.Buffer.BlockCopy(buffer, byteCnt, portBytes, 0, portBytes.Length);
+					byteCnt += portBytes.Length;
+					cmd.port = BitConverter.ToInt32(portBytes,0);
+					
+					System.Buffer.BlockCopy(buffer, byteCnt, cmdBytes, 0, cmdBytes.Length);
+					byteCnt += cmdBytes.Length;
+					cmd.command = BitConverter.ToInt32(cmdBytes,0);                                 
+					
+					System.Buffer.BlockCopy(buffer, byteCnt, fileSizeBytes, 0, fileSizeBytes.Length);
+					byteCnt += fileSizeBytes.Length;
+					fileSize = BitConverter.ToInt32(fileSizeBytes, 0);
+					
+					System.Buffer.BlockCopy(buffer, byteCnt, fileNameSizeBytes, 0, fileNameSizeBytes.Length);
+					byteCnt += fileNameSizeBytes.Length;
+					fileNameSize = BitConverter.ToInt32(fileNameSizeBytes, 0);
+					
+		            UTF8Encoding utf8 = new UTF8Encoding();
+	
+		            byte[] fileNameBytes = new byte[fileNameSize];	
+					System.Buffer.BlockCopy(buffer, byteCnt, fileNameBytes, 0, fileNameSize);
+					
+					cmd.fileName = utf8.GetString(fileNameBytes);
+					clientQueue.Add(cmd);
+				}
+			}
+				
+			
+			
+		}
+		
         public void connectToServer()
         {
             IPHostEntry serverIP = Dns.GetHostEntry(myServer.peerIP.ToString());
