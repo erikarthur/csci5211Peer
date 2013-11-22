@@ -1,21 +1,19 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="peer/message.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="peer/PeerToPeer.cs">
     <Files>
-      <File FileName="peer/Program.cs" Line="27" Column="3" />
-      <File FileName="peer/server.cs" Line="320" Column="30" />
-      <File FileName="peer/client.cs" Line="109" Column="1" />
-      <File FileName="peer/PeerToPeer.cs" Line="124" Column="11" />
-      <File FileName="peer/getFile.cs" Line="134" Column="5" />
-      <File FileName="peer/message.cs" Line="51" Column="3" />
+      <File FileName="peer/Program.cs" Line="22" Column="31" />
+      <File FileName="peer/server.cs" Line="185" Column="41" />
+      <File FileName="peer/client.cs" Line="111" Column="17" />
+      <File FileName="peer/PeerToPeer.cs" Line="407" Column="4" />
+      <File FileName="peer/getFile.cs" Line="131" Column="14" />
+      <File FileName="peer/message.cs" Line="47" Column="1" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore>
-      <Breakpoint file="/home/erik/csci5211/peer/peer/Program.cs" line="132" />
-      <Breakpoint file="/home/erik/csci5211/peer/peer/server.cs" line="179" />
       <Breakpoint file="/home/erik/csci5211/peer/peer/server.cs" line="317" />
-      <Breakpoint file="/home/erik/csci5211/peer/peer/server.cs" line="54" />
+      <Breakpoint file="/home/erik/csci5211/peer/peer/Program.cs" line="133" />
     </BreakpointStore>
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches>
