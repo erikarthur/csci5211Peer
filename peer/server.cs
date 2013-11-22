@@ -410,15 +410,19 @@ namespace socketSrv
 			byte [] msgLenBytes = new byte[4];
 			byte [] addressBytes = new byte[4];
 			byte [] portBytes = new byte[4];
+            byte[] fileNameSizeBytes = new byte[4];
             byte[] fileNameBytes = new byte[75];
-            int byteCnt = 4;
+            byte[] fileSizeBytes = new byte[4];
+            
 			
 			Console.WriteLine("Sent request to client machine(s)\n");
 			cmdBytes = BitConverter.GetBytes(cmd.command);
 			msgLenBytes = BitConverter.GetBytes(16);
 			addressBytes = cmd.peerIP.GetAddressBytes();
 			portBytes = BitConverter.GetBytes(cmd.port);
-			
+            fileSizeBytes = BitConverter.GetBytes(0);
+
+            int byteCnt = 4;
 			//System.Buffer.BlockCopy(msgLenBytes,0,buffer,0,4);
             System.Buffer.BlockCopy(addressBytes, 0, buffer, byteCnt, addressBytes.Length);
             byteCnt += addressBytes.Length;
@@ -429,9 +433,19 @@ namespace socketSrv
             System.Buffer.BlockCopy(cmdBytes, 0, buffer, byteCnt, cmdBytes.Length);
             byteCnt += cmdBytes.Length;
 
+            System.Buffer.BlockCopy(fileSizeBytes, 0, buffer, byteCnt, fileSizeBytes.Length);
+            byteCnt += fileSizeBytes.Length;
+
+
             UTF8Encoding utf8 = new UTF8Encoding();
-            fileNameBytes = utf8.GetBytes(cmd.fileName);
+            int fileNameSize = utf8.GetByteCount(cmd.fileName);
+
             int fileNameLen = utf8.GetByteCount(cmd.fileName);
+            fileNameSizeBytes = BitConverter.GetBytes(fileNameLen);
+            System.Buffer.BlockCopy(fileNameSizeBytes, 0, buffer, byteCnt, fileNameSizeBytes.Length);
+            byteCnt += fileNameSizeBytes.Length;
+
+            fileNameBytes = utf8.GetBytes(cmd.fileName);
             System.Buffer.BlockCopy(fileNameBytes, 0, buffer, byteCnt, fileNameLen);
 
             int msgLen = byteCnt + fileNameLen;

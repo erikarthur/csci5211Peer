@@ -1,5 +1,5 @@
 ﻿
-#undef WINDOWS   //comment out for linux or unix
+#define WINDOWS   //comment out for linux or unix
 
 
 using socketSrv;
@@ -170,9 +170,9 @@ namespace peer
                         msg.fileName = fileDir + msg.fileName;
 						g2.getFile(msg);
 						break;
-                case 0:  //refresh filelist
-                        refreshFileList(fileDir);
-                        break;
+                //case 0:  //refresh filelist
+                //        refreshFileList(fileDir);
+                //        break;
 				}
 			}
 		}
