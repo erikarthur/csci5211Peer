@@ -1,19 +1,21 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="peer/PeerToPeer.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="peer/client.cs">
     <Files>
       <File FileName="peer/Program.cs" Line="22" Column="31" />
-      <File FileName="peer/server.cs" Line="185" Column="41" />
-      <File FileName="peer/client.cs" Line="111" Column="17" />
-      <File FileName="peer/PeerToPeer.cs" Line="407" Column="4" />
-      <File FileName="peer/getFile.cs" Line="131" Column="14" />
+      <File FileName="peer/server.cs" Line="345" Column="18" />
+      <File FileName="peer/client.cs" Line="197" Column="3" />
+      <File FileName="peer/PeerToPeer.cs" Line="389" Column="4" />
+      <File FileName="peer/getFile.cs" Line="77" Column="38" />
       <File FileName="peer/message.cs" Line="47" Column="1" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore>
-      <Breakpoint file="/home/erik/csci5211/peer/peer/server.cs" line="317" />
       <Breakpoint file="/home/erik/csci5211/peer/peer/Program.cs" line="133" />
+      <Breakpoint file="/home/erik/csci5211/peer/peer/server.cs" line="334" />
+      <Breakpoint file="/home/erik/csci5211/peer/peer/PeerToPeer.cs" line="159" />
+      <Breakpoint file="/home/erik/csci5211/peer/peer/PeerToPeer.cs" line="168" />
     </BreakpointStore>
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches>
@@ -23,5 +25,6 @@
     <Watch file="peer/server.cs" line="205" offsetX="798" offsetY="3468" expression="buf" liveUpdate="False" />
     <Watch file="peer/server.cs" line="315" offsetX="398" offsetY="5338" expression="serverQueue" liveUpdate="False" />
     <Watch file="peer/PeerToPeer.cs" line="123" offsetX="486" offsetY="2074" expression="serverQueue" liveUpdate="False" />
+    <Watch file="peer/PeerToPeer.cs" line="162" offsetX="342" offsetY="2737" expression="msg" liveUpdate="False" />
   </MonoDevelop.Ide.DebuggingService.PinnedWatches>
 </Properties>

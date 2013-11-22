@@ -60,20 +60,20 @@ namespace socketSrv
 
 		public List<commandMessage> returnServerQueue()
 		{
-			List<commandMessage> tempQueue = new List<commandMessage>();
-			tempQueue = serverQueue;
+//			List<commandMessage> tempQueue = new List<commandMessage>();
+//			tempQueue = serverQueue;
+//			
+//			if (serverQueue.Count > 1)
+//			{
+//				
+//				//lock(serverQueue)
+//				//{
+//				serverQueue.Clear();
+//				//}
+//			}
 			
-			if (serverQueue.Count > 1)
-			{
-				
-				//lock(serverQueue)
-				//{
-				serverQueue.Clear();
-				//}
-			}
 			
-			
-			return tempQueue;
+			return serverQueue;
 		}
 		
         public void Init()
@@ -265,7 +265,7 @@ namespace socketSrv
 
             commandMessage msg = parseCommandMessage(myBuffer, e.BytesTransferred);
 			//this.serverQueue.Enqueue(msg);
-			serverMsgList.Add(msg);
+			serverQueue.Add(msg);
 
             int peerNumber;
             //create peer variable to send back to client

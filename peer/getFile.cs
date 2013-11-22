@@ -13,6 +13,7 @@ namespace peer
 	{
 		public void getFile (object data)
 		{
+			Console.WriteLine("in file transport - get file");
 			socketSrv.commandMessage cmd = (socketSrv.commandMessage)data;
 			IPEndPoint iep = new IPEndPoint(IPAddress.Any, cmd.port);
 			TcpListener server = new TcpListener(iep);
@@ -63,7 +64,7 @@ namespace peer
 			fileName = utf8.GetString(fileNameBytes);
 
 			int bytesLeft = (24 + fileNameSize + fileSize);
-            BinaryWriter fs = new BinaryWriter(File.Open(cmd.fileDir + fileName, FileMode.CreateNew));
+            BinaryWriter fs = new BinaryWriter(File.Open(cmd.fileDir + "/" + fileName, FileMode.CreateNew));
             
             fs.Write(buffer, 24 + fileNameSize, numBytes - (24 + fileNameSize));
 
@@ -88,7 +89,7 @@ namespace peer
 		
 		public void sendFile (object data)
 		{
-			
+			Console.WriteLine("in file transport - send file");
 			
 			socketSrv.commandMessage cmd = (socketSrv.commandMessage)data;
 			
