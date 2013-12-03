@@ -194,7 +194,7 @@ namespace socketSrv
             switch( cmd.command)
             {
                 case 2:    //get file
-                    Console.WriteLine("\nSent request to server machine");
+                    //Console.WriteLine("\nSent request to server machine");
                     //int basicCmdLen = 16;
                     int byteCnt = 4;
 
@@ -236,7 +236,7 @@ namespace socketSrv
                     System.Buffer.BlockCopy(msgLenBytes, 0, buffer, 0, msgLenBytes.Length);
 
                     clientStream.Write(buffer, 0, msgLen);
-                    Console.WriteLine("sent a message of {0} bytes asking for file", msgLen);
+                    Console.WriteLine("Sent a message of {0} bytes asking for file", msgLen);
                     
 					break;
 
